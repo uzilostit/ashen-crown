@@ -1,0 +1,11 @@
+{
+  "countdown": ["Kindled of {hearth}, the Winnowing begins in {count}.", "Hold fast, {name}. The Quillwood is listening."],
+  "death": ["The Quillwood takes {name}.", "One less crown in contention: {name}."],
+  "collapseWarning": ["{zone} will fall in sixty seconds. Move, Kindled."],
+  "collapse": ["The winnowing closes over {zone}."],
+  "alliance": ["{name} finds common cause beneath the Crown."],
+  "betrayal": ["The pact breaks. {name} has chosen blood over bonds."],
+  "flare": ["A flare burns over Base Camp. The sky has seen you."],
+  "cannonRecap": ["Night falls. {count} Kindled remain."]
+}
+
