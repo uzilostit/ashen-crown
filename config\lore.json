@@ -1,0 +1,15 @@
+{
+  "title": "ASHEN CROWN",
+  "setting": "The Regent Council of Veridan forces young Kindled from the Hearths to fight in the Winnowing, a televised survival hunt in the sealed Quillwood.",
+  "narrator": "The Herald narrates every turning point.",
+  "escape": "A rescue helicopter is the only way out.",
+  "hearths": {
+    "marsh": { "color": "#65836a", "crest": "reeds", "announcerTone": "low and patient" },
+    "cinder": { "color": "#b85f3d", "crest": "ember", "announcerTone": "bright and fierce" },
+    "pine": { "color": "#29574a", "crest": "fir", "announcerTone": "still and watchful" },
+    "salt": { "color": "#d4c699", "crest": "sun disk", "announcerTone": "dry and clear" },
+    "frost": { "color": "#a4cfe0", "crest": "shard", "announcerTone": "cold and precise" },
+    "orchard": { "color": "#be6f74", "crest": "fallen fruit", "announcerTone": "soft and old" }
+  }
+}
+
