@@ -23,6 +23,7 @@ export interface PlayerView {
 export interface RoomView {
   code: string;
   phase: "lobby" | "starting" | "match" | "ended";
+  countdownEndsAt: number | null;
   players: PlayerView[];
   settings: RoomSettings;
   maxPlayers: number;
