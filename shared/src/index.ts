@@ -29,6 +29,9 @@ export interface RoomView {
   maxPlayers: number;
   minPlayers: number;
 }
+import type { GameAction, GameInput, GameState } from "./game.js";
+export type { GamePlayer, InventoryStack, ItemId, LootDrop, GameState, GameInput, GameAction } from "./game.js";
+export interface RTCSignal { type: "offer" | "answer" | "candidate"; sdp?: string; candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; }
 export type ClientMessage =
   | { type: "create-room"; name: string; hearth: Hearth; look: FigureLook }
   | { type: "join-room"; code: string; name: string; hearth: Hearth; look: FigureLook; reconnectToken?: string }
@@ -36,12 +39,17 @@ export type ClientMessage =
   | { type: "set-settings"; settings: RoomSettings }
   | { type: "start-match" }
   | { type: "kick-player"; playerId: string }
-  | { type: "play-again" }\n  | { type: "game-input"; input: GameInput }\n  | { type: "game-action"; action: GameAction }\n  | { type: "voice-signal"; targetId: string; signal: RTCSignal };
+  | { type: "play-again" }
+  | { type: "game-input"; input: GameInput }
+  | { type: "game-action"; action: GameAction }
+  | { type: "voice-signal"; targetId: string; signal: RTCSignal };
 export type ServerMessage =
   | { type: "welcome"; playerId: string; reconnectToken: string; room: RoomView }
   | { type: "room-update"; room: RoomView }
   | { type: "error"; message: string }
-  | { type: "notice"; message: string }\n  | { type: "game-state"; state: GameState }\n  | { type: "voice-signal"; fromId: string; signal: RTCSignal };
+  | { type: "notice"; message: string }
+  | { type: "game-state"; state: GameState }
+  | { type: "voice-signal"; fromId: string; signal: RTCSignal };
 
 export const defaultSettings = (): RoomSettings => ({ matchLengthMinutes: 30, collapseSpeed: "standard", friendlyFire: false });
 export const makeRoomCode = (random: () => number = Math.random): string => Array.from({ length: 6 }, () => ROOM_CODE_ALPHABET[Math.floor(random() * ROOM_CODE_ALPHABET.length)]).join("");
