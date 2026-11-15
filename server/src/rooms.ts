@@ -15,9 +15,9 @@ export class RoomManager {
   }
   join(code: string, name: string, hearth: Hearth, look: FigureLook, token?: string): { room: Room; player: Player; reconnected: boolean } {
     const room = this.requireRoom(code);
-    if (room.phase !== "lobby") throw new RoomError("The Winnowing has already begun.");
     const existing = token ? [...room.players.values()].find(p => p.reconnectToken === token) : undefined;
     if (existing) { existing.connected = true; existing.disconnectedAt = undefined; if (![...room.players.values()].some(p => p.isHost && p.connected)) existing.isHost = true; return { room, player: existing, reconnected: true }; }
+    if (room.phase !== "lobby") throw new RoomError("The Winnowing has already begun.");
     if (room.players.size >= MAX_ROOM_PLAYERS) throw new RoomError("This room is full.");
     const player = this.newPlayer(name, hearth, look, false); room.players.set(player.id, player); return { room, player, reconnected: false };
   }
