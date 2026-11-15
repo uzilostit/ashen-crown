@@ -1,17 +1,63 @@
 {
-  "dagger": { "type": "weapon", "stackLimit": 1, "droppable": false },
-  "spear": { "type": "weapon", "stackLimit": 1 },
-  "bow": { "type": "weapon", "stackLimit": 1 },
-  "arrows": { "type": "ammo", "stackLimit": 12 },
-  "axe": { "type": "weapon", "stackLimit": 1 },
-  "crossbow": { "type": "weapon", "stackLimit": 1 },
-  "bandage": { "type": "medical", "stackLimit": 4 },
-  "healthKit": { "type": "medical", "stackLimit": 2 },
-  "waterBottle": { "type": "survival", "stackLimit": 3 },
-  "ration": { "type": "survival", "stackLimit": 3 },
-  "backpack": { "type": "upgrade", "stackLimit": 1 },
-  "flareGun": { "type": "escape", "stackLimit": 1 },
-  "torch": { "type": "utility", "stackLimit": 1 },
-  "snare": { "type": "trap", "stackLimit": 2 }
+  "dagger": {
+    "type": "weapon",
+    "stackLimit": 1,
+    "droppable": false
+  },
+  "spear": {
+    "type": "weapon",
+    "stackLimit": 1
+  },
+  "bow": {
+    "type": "weapon",
+    "stackLimit": 1
+  },
+  "arrows": {
+    "type": "ammo",
+    "stackLimit": 12
+  },
+  "axe": {
+    "type": "weapon",
+    "stackLimit": 1
+  },
+  "crossbow": {
+    "type": "weapon",
+    "stackLimit": 1
+  },
+  "bandage": {
+    "type": "medical",
+    "stackLimit": 4
+  },
+  "healthKit": {
+    "type": "medical",
+    "stackLimit": 2
+  },
+  "waterBottle": {
+    "type": "survival",
+    "stackLimit": 3
+  },
+  "ration": {
+    "type": "survival",
+    "stackLimit": 3
+  },
+  "backpack": {
+    "type": "upgrade",
+    "stackLimit": 1
+  },
+  "flareGun": {
+    "type": "escape",
+    "stackLimit": 1
+  },
+  "torch": {
+    "type": "utility",
+    "stackLimit": 1
+  },
+  "snare": {
+    "type": "trap",
+    "stackLimit": 2
+  },
+  "splint": {
+    "type": "medical",
+    "stackLimit": 2
+  }
 }
-
