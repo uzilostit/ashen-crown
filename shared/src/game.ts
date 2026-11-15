@@ -13,7 +13,7 @@ export interface LootDrop { id: string; item: ItemId; count: number; x: number; 
 export interface GameState {
   phase: "countdown" | "playing" | "flare" | "helicopter" | "ended";
   startedAt: number; endsAt: number; players: GamePlayer[];
-  loot: LootDrop[]; zone: { safeRadius: number; warningZone: number | null; collapseAt: number | null; collapsed: number[]; nextCollapseAt: number };
+  loot: LootDrop[]; allianceInvites: { fromId: string; toId: string }[]; zone: { safeRadius: number; warningZone: number | null; collapseAt: number | null; collapsed: number[]; nextCollapseAt: number };
   flare: { x: number; z: number; shooterId: string; helicopterAt: number } | null;
   helicopter: { x: number; z: number; leavesAt: number } | null;
   winnerId: string | null; message: string;
