@@ -16,3 +16,20 @@ test("host migrates when host disconnects", () => {
   assert.equal(second.isHost, true);
 });
 
+
+test("Winnowing starts after the authoritative 15-second countdown", () => {
+  let now = 100;
+  const manager = new RoomManager(() => now, () => "CROWN7");
+  const { room, player: host } = manager.create("Aster", "pine", "scout");
+  const players = [host];
+  for (let i = 1; i < 5; i++) players.push(manager.join(room.code, "Player" + i, "marsh", "scout").player);
+  for (const player of players) manager.update(room, player.id, { type: "set-ready", ready: true });
+  manager.update(room, host.id, { type: "start-match" });
+  assert.equal(room.phase, "starting");
+  assert.equal(room.countdownEndsAt, 15_100);
+  now = 15_099;
+  assert.equal(manager.advance().length, 0);
+  now = 15_100;
+  assert.deepEqual(manager.advance(), [room]);
+  assert.equal(room.phase, "match");
+});
