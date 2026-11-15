@@ -20,7 +20,8 @@ export class GameEngine {
     });
     const loot:LootDrop[]=[];
     for(let i=0;i<48;i++){const a=i*2.399963,r=5+(i%8)*3;loot.push({id:randomUUID(),item:items[i%items.length],count:items[i%items.length]==="arrows"?6:1,x:Math.cos(a)*r,z:Math.sin(a)*r});}
-    const length=room.settings.matchLengthMinutes*60_000;\n    const collapseMultiplier=room.settings.collapseSpeed==="slow"?1.25:room.settings.collapseSpeed==="fast"?0.75:1;
+    const length=room.settings.matchLengthMinutes*60_000;
+    const collapseMultiplier=room.settings.collapseSpeed==="slow"?1.25:room.settings.collapseSpeed==="fast"?0.75:1;
     this.friendlyFire.set(room.code,room.settings.friendlyFire);
     this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6*collapseMultiplier)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
   }
