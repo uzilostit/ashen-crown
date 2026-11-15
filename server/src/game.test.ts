@@ -9,7 +9,7 @@ test("server simulation moves players from validated inputs", () => {
   const engine = new GameEngine();
   engine.start(room, 1);
   const before = engine.get(room.code)!.players.find(p => p.id === player.id)!.x;
-  engine.input(room.code, player.id, { x: 1, z: 0, yaw: 0, sprint: false });
+  engine.input(room.code, player.id, { x: 1, z: 0, yaw: 0, sprint: false, block: false, dodge: false });
   engine.tick(room, 51);
   const after = engine.get(room.code)!.players.find(p => p.id === player.id)!.x;
   assert.ok(after > before);
