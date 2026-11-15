@@ -30,7 +30,7 @@ export interface RoomView {
   minPlayers: number;
 }
 import type { GameAction, GameInput, GameState } from "./game.js";
-export type { GamePlayer, InventoryStack, ItemId, LootDrop, GameState, GameInput, GameAction } from "./game.js";
+export type { GamePlayer, InventoryStack, ItemId, LootDrop, Trap, GameState, GameInput, GameAction } from "./game.js";
 export interface RTCSignal { type: "offer" | "answer" | "candidate"; sdp?: string; candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; }
 export type ClientMessage =
   | { type: "create-room"; name: string; hearth: Hearth; look: FigureLook }
