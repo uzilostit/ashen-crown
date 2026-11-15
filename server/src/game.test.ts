@@ -114,3 +114,18 @@ test("blocking reduces damage and a timed dodge avoids an attack", () => {
   engine.action(room.code, first.id, { type: "attack", targetId: second.id }, 2200);
   assert.equal(b.health, 92);
 });
+
+test("flare escape only unlocks after the five zone collapses", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player } = rooms.create("Aster", "pine", "scout");
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const p = state.players.find(x => x.id === player.id)!;
+  p.inventory.push({ item: "flareGun", count: 1 });
+  engine.action(room.code, player.id, { type: "flare" }, 500);
+  assert.equal(state.phase, "playing");
+  state.zone.collapsed = [0,1,2,3,4];
+  engine.action(room.code, player.id, { type: "flare" }, 800);
+  assert.equal(state.phase, "flare");
+});
