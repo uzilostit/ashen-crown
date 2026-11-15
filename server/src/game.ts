@@ -36,6 +36,7 @@ export class GameEngine {
     if(action.type==="ally-respond"){const inv=this.invites.get(code+":"+p.id);if(!inv||inv.fromId!==action.fromId)return;this.invites.delete(code+":"+p.id);const other=s.players.find(x=>x.id===inv.fromId);if(action.accept&&other?.alive&&!other.allianceId){const alliance=randomUUID();other.allianceId=alliance;p.allianceId=alliance;s.message=other.name+" and "+p.name+" have formed an alliance.";}}
     if(action.type==="leave-alliance"){const id=p.allianceId;if(id){for(const member of s.players)if(member.allianceId===id)member.allianceId=null;s.message=p.name+" has left their alliance.";}}
     if(action.type==="board-helicopter"&&s.phase==="helicopter"&&s.helicopter&&distance(p,s.helicopter)<6){const escaped=s.players.filter(x=>x.escaped).length;if(escaped<2){p.escaped=true;s.message=p.name+" has boarded the helicopter.";}}
+    if(action.type==="emote"){const allowed=["Enemy spotted","Need supplies","Come here","Danger","I'm moving"];if(allowed.includes(action.text))s.message=p.name+": "+action.text;}
   }
   tick(room:Room,now=Date.now()){
     const s=this.states.get(room.code);if(!s||s.phase==="ended")return;
