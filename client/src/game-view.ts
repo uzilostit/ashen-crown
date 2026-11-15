@@ -116,7 +116,45 @@ function loot(){const me=current?.players.find(p=>p.id===selfId);const d=current
 function invite(){const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive&&p.id!==selfId).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(target)sendMessage({type:"game-action",action:{type:"ally-invite",targetId:target.id}});}
 function updateScene(){
  if(!scene||!current)return;
- for(const p of current.players){let mesh=figures.get(p.id);if(!mesh){mesh=new THREE.Group();const paper=new THREE.MeshStandardMaterial({color:color[p.hearth]??"#777",roughness:1,flatShading:true});const body=new THREE.Mesh(new THREE.BoxGeometry(.72,1.05,.34),paper);body.position.y=.88;const head=new THREE.Mesh(new THREE.DodecahedronGeometry(.31,0),new THREE.MeshStandardMaterial({color:"#d6b991",roughness:1,flatShading:true}));head.position.y=1.62;const jointMat=new THREE.MeshStandardMaterial({color:"#c3aa87",roughness:1,flatShading:true});const armL=new THREE.Mesh(new THREE.BoxGeometry(.18,.78,.2),paper);armL.position.set(-.48,.9,0);armL.rotation.z=-.18;const armR=armL.clone();armR.position.x=.48;armR.rotation.z=.18;const legL=new THREE.Mesh(new THREE.BoxGeometry(.23,.72,.25),paper);legL.position.set(-.2,.18,0);const legR=legL.clone();legR.position.x=.2;const pack=new THREE.Mesh(new THREE.BoxGeometry(.42,.52,.22),new THREE.MeshStandardMaterial({color:"#514537",roughness:1,flatShading:true}));pack.position.set(0,1,-.28);const joint=new THREE.Mesh(new THREE.IcosahedronGeometry(.13,0),jointMat);joint.position.set(0,1.32,0);mesh.add(body,head,armL,armR,legL,legR,pack,joint);scene.add(mesh);figures.set(p.id,mesh);}mesh.position.set(p.x*2,0,p.z*2);mesh.scale.setScalar(1.35);mesh.rotation.y=p.yaw;mesh.visible=p.alive&&!p.escaped;}
+ for(const p of current.players){let mesh=figures.get(p.id);if(!mesh){
+  mesh=new THREE.Group();
+  const paper=new THREE.MeshStandardMaterial({color:color[p.hearth]??"#777",roughness:.88,flatShading:true});
+  const trim=new THREE.MeshStandardMaterial({color:"#d8c79b",roughness:.82,flatShading:true});
+  const leather=new THREE.MeshStandardMaterial({color:"#514537",roughness:.96,flatShading:true});
+  const skin=new THREE.MeshStandardMaterial({color:"#d5b895",roughness:.9,flatShading:true});
+  const dark=new THREE.MeshStandardMaterial({color:"#282d28",roughness:.8});
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.31,.43,.92,7),paper);torso.position.y=1.02;torso.castShadow=true;
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.62,.36,.18),paper);chest.position.set(0,1.2,.03);chest.rotation.x=-.12;
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(.27,.055,5,8),trim);collar.position.y=1.48;collar.rotation.x=Math.PI/2;
+  const belt=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.11,8),leather);belt.position.y=.76;
+  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.13,.13,.04),trim);buckle.position.set(0,.77,.36);
+  const head=new THREE.Mesh(new THREE.IcosahedronGeometry(.31,1),skin);head.position.y=1.72;head.scale.set(.88,1.05,.9);head.castShadow=true;
+  const hood=new THREE.Mesh(new THREE.SphereGeometry(.325,8,6,0,Math.PI*2,0,Math.PI*.58),leather);hood.position.set(0,1.81,-.035);
+  const face=new THREE.Mesh(new THREE.BoxGeometry(.28,.08,.045),skin);face.position.set(0,1.62,.26);
+  const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.025,6,5),dark);eyeL.position.set(-.085,1.72,.278);
+  const eyeR=eyeL.clone();eyeR.position.x=.085;
+  const scarf=new THREE.Mesh(new THREE.ConeGeometry(.2,.48,5),trim);scarf.position.set(0,1.25,.2);scarf.rotation.x=-.8;
+  const armL=new THREE.Group(),armR=new THREE.Group();
+  for(const [arm,side] of [[armL,-1],[armR,1]] as const){
+    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.43,6),paper);upper.position.y=-.19;upper.castShadow=true;
+    const cuff=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.1,6),trim);cuff.position.y=-.4;
+    const hand=new THREE.Mesh(new THREE.IcosahedronGeometry(.105,0),skin);hand.position.y=-.51;
+    arm.add(upper,cuff,hand);arm.position.set(side*.43,1.25,0);arm.rotation.z=side*.12;
+  }
+  const legL=new THREE.Group(),legR=new THREE.Group();
+  for(const [leg,side] of [[legL,-1],[legR,1]] as const){
+    const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.43,6),leather);thigh.position.y=-.18;thigh.castShadow=true;
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.24,.2,.38),dark);boot.position.set(0,-.45,.07);boot.castShadow=true;
+    leg.add(thigh,boot);leg.position.set(side*.19,.58,0);
+  }
+  const pack=new THREE.Mesh(new THREE.BoxGeometry(.46,.56,.25),leather);pack.position.set(0,1.08,-.3);pack.castShadow=true;
+  const packFlap=new THREE.Mesh(new THREE.BoxGeometry(.34,.2,.04),trim);packFlap.position.set(0,1.25,-.44);
+  const shoulderCape=new THREE.Mesh(new THREE.ConeGeometry(.58,.78,5),paper);shoulderCape.position.set(0,1.02,-.22);shoulderCape.rotation.x=Math.PI;
+  const badge=new THREE.Mesh(new THREE.OctahedronGeometry(.105,0),trim);badge.position.set(.23,1.31,.16);
+  mesh.add(torso,chest,collar,belt,buckle,head,hood,face,eyeL,eyeR,scarf,armL,armR,legL,legR,pack,packFlap,shoulderCape,badge);
+  mesh.traverse(o=>{if((o as THREE.Mesh).isMesh){(o as THREE.Mesh).castShadow=true;(o as THREE.Mesh).receiveShadow=true;}});
+  scene.add(mesh);figures.set(p.id,mesh);
+ }mesh.position.set(p.x*2,0,p.z*2);mesh.scale.setScalar(1.35);mesh.rotation.y=p.yaw;mesh.visible=p.alive&&!p.escaped;}
  const ids=new Set(current.players.map(p=>p.id));for(const [id,m] of figures)if(!ids.has(id)){scene.remove(m);figures.delete(id);}
  const lootIds=new Set(current.loot.map(d=>d.id));for(const d of current.loot){if(!drops.has(d.id)){const m=new THREE.Mesh(new THREE.BoxGeometry(.55,.55,.55),new THREE.MeshStandardMaterial({color:"#d5b86d"}));m.position.set(d.x*2,.7,d.z*2);m.scale.setScalar(1.7);scene.add(m);drops.set(d.id,m);}}for(const [id,m] of drops)if(!lootIds.has(id)){scene.remove(m);drops.delete(id);}
  const trapIds=new Set(current.traps.map(t=>t.id));for(const t of current.traps){if(!snares.has(t.id)){const m=new THREE.Mesh(new THREE.TorusGeometry(.8,.09,5,16),new THREE.MeshStandardMaterial({color:"#a34f39"}));m.rotation.x=Math.PI/2;m.position.set(t.x*2,.24,t.z*2);m.scale.setScalar(2);scene.add(m);snares.set(t.id,m);}}for(const [id,m] of snares)if(!trapIds.has(id)){scene.remove(m);snares.delete(id);}
