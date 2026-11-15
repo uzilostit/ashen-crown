@@ -4,11 +4,13 @@ import { extname, join, normalize } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import type { ClientMessage, ServerMessage } from "@ashen-crown/shared";
 import { RoomError, RoomManager, type Room } from "./rooms.js";
-import { Auth } from "./auth.js";\nimport { GameEngine } from "./game.js";
+import { Auth } from "./auth.js";
+import { GameEngine } from "./game.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const rooms = new RoomManager();
-const auth = new Auth(); void auth.initialize();\nconst game = new GameEngine();
+const auth = new Auth(); void auth.initialize();
+const game = new GameEngine();
 const clients = new Map<WebSocket, { room: Room; playerId: string }>();
 const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" };
 const cookies = (value = "") => Object.fromEntries(value.split(";").map(v => v.trim().split(/=(.*)/s, 2)).filter(v => v.length === 2));
