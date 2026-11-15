@@ -17,6 +17,7 @@ export class GameEngine {
   private invites=new Map<string,{fromId:string;toId:string}>();
   private friendlyFire=new Map<string,boolean>();
   private collapseSpeeds=new Map<string,number>();
+  private nextRecapAt=new Map<string,number>();
   start(room:Room,now=Date.now()) {
     const players:GamePlayer[]=[...room.players.values()].filter(p=>p.connected).map((p,i)=>{
       const a=i*Math.PI*2/Math.max(1,room.players.size);
@@ -28,7 +29,8 @@ export class GameEngine {
     const collapseMultiplier=room.settings.collapseSpeed==="slow"?1.25:room.settings.collapseSpeed==="fast"?0.75:1;
     this.friendlyFire.set(room.code,room.settings.friendlyFire);
     this.collapseSpeeds.set(room.code,collapseMultiplier);
-    this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,traps:[],allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6*collapseMultiplier)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
+    this.nextRecapAt.set(room.code,now+300_000);
+    this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,traps:[],allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6*collapseMultiplier)},flare:null,helicopter:null,winnerId:null,message:herald("countdown",{name:players[0]?.name??"Kindled",hearth:players[0]?.hearth??"all",count:"15"})});
   }
   get(code:string){return this.states.get(code);}
   setConnected(code:string,id:string,connected:boolean){const p=this.states.get(code)?.players.find(x=>x.id===id);if(p)p.connected=connected;}
@@ -54,6 +56,7 @@ export class GameEngine {
     for(const p of s.players){if(!room.players.has(p.id)){p.alive=false;continue;}if(!p.alive||p.escaped)continue;const input=p.connected?(this.inputs.get(room.code+":"+p.id)??{x:0,z:0,yaw:p.yaw,sprint:false}):{x:0,z:0,yaw:p.yaw,sprint:false};if(p.connected)p.yaw=input.yaw;const mag=Math.hypot(input.x,input.z)||1;const speed=input.sprint&&p.stamina>0&&!p.brokenLeg?8.2:p.brokenLeg?3.2:5.1;p.x=clamp(p.x+input.x/mag*speed*dt,-43,43);p.z=clamp(p.z+input.z/mag*speed*dt,-43,43);p.stamina=clamp(p.stamina+(input.sprint?-18:12)*dt,0,100);p.hunger=clamp(p.hunger-0.025*dt,0,100);p.thirst=clamp(p.thirst-0.04*dt,0,100);if(p.hunger===0||p.thirst===0)p.health-=0.15;if(p.bleeding>0){p.health-=p.bleeding*dt;p.bleeding=Math.max(0,p.bleeding-0.01*dt);}if(Math.hypot(p.x,p.z)>s.zone.safeRadius){p.health-=5*dt;}for(const trap of s.traps){if(trap.ownerId!==p.id&&distance(p,trap)<1.4){p.health-=30;p.bleeding=0.5;p.brokenLeg=true;s.traps=s.traps.filter(x=>x.id!==trap.id);s.message=p.name+" was caught in a snare.";break;}}if(p.health<=0){p.health=0;p.alive=false;for(const stack of p.inventory)if(stack.item!=="dagger")s.loot.push({id:randomUUID(),item:stack.item,count:stack.count,x:p.x,z:p.z});p.inventory=p.inventory.filter(x=>x.item==="dagger");s.message=herald("death",{name:p.name}); }}
     if(s.zone.warningZone===null&&now>=s.zone.nextCollapseAt&&s.zone.collapsed.length<5){s.zone.warningZone=s.zone.collapsed.length;s.zone.collapseAt=now+60_000;s.message=herald("collapseWarning",{zone:["Marsh","Cinder Flats","Pine Forest","Salt Dunes","Frost Ridge","Orchard Ruins"][s.zone.warningZone]});}
     if(s.zone.warningZone!==null&&s.zone.collapseAt!==null&&now>=s.zone.collapseAt){const collapsedZone=["Marsh","Cinder Flats","Pine Forest","Salt Dunes","Frost Ridge","Orchard Ruins"][s.zone.warningZone];s.zone.collapsed.push(s.zone.warningZone);s.zone.warningZone=null;s.zone.collapseAt=null;s.zone.safeRadius=Math.max(8,s.zone.safeRadius-6);s.zone.nextCollapseAt=now+Math.max(45_000,(room.settings.matchLengthMinutes*60_000)/6*collapseMultiplier);s.message=herald("collapse",{zone:collapsedZone}); }
+    const recap=this.nextRecapAt.get(room.code)??Infinity;if(now>=recap&&s.phase==="playing"){s.message=herald("cannonRecap",{count:String(s.players.filter(p=>p.alive&&!p.escaped).length)});this.nextRecapAt.set(room.code,recap+300_000);}
     if(s.phase==="flare"&&s.flare&&now>=s.flare.helicopterAt){s.phase="helicopter";s.helicopter={x:s.flare.x,z:s.flare.z,leavesAt:now+30_000};s.message="The helicopter has arrived. Two seats remain.";}
     if(s.phase==="helicopter"&&s.helicopter&&now>=s.helicopter.leavesAt){s.phase="ended";const escaped=s.players.filter(p=>p.escaped);s.winnerId=escaped[0]?.id??null;s.message="The helicopter has departed. "+escaped.length+" Kindled escaped."; }
     const alive=s.players.filter(p=>p.alive&&!p.escaped);if(alive.length===0&&s.phase!=="ended"&&s.phase!=="helicopter"){s.phase="ended";s.winnerId=null;s.message="No Kindled survived the Winnowing.";}if(alive.length===1&&s.phase!=="ended"&&s.phase!=="helicopter"){s.phase="ended";s.winnerId=alive[0].id;s.message=alive[0].name+" is the last Kindled standing.";}if(now>=s.endsAt&&s.phase!=="ended"){s.phase="ended";s.winnerId=alive[0]?.id??null;s.message="The Winnowing has ended.";}
