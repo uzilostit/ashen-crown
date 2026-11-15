@@ -1,5 +1,6 @@
 import type { ClientMessage, FigureLook, Hearth, RoomView, ServerMessage } from "@ashen-crown/shared";
-import * as THREE from "three";\nimport type { GameState, GamePlayer, LootDrop } from "@ashen-crown/shared";
+import * as THREE from "three";
+import type { GameState, GamePlayer, LootDrop } from "@ashen-crown/shared";
 import { HEARTHS } from "@ashen-crown/shared";
 import "./style.css";
 
@@ -9,7 +10,12 @@ const saved = stored ? JSON.parse(stored) as { name?: string; hearth?: Hearth; l
 let socket: WebSocket | undefined;
 let room: RoomView | undefined;
 let playerId = "";
-let reconnectToken = saved.token ?? "";\nlet gameState: GameState | undefined;\nlet localVoice: MediaStream | undefined;\nconst voicePeers = new Map<string, RTCPeerConnection>();\nconst pendingIce = new Map<string, RTCIceCandidateInit[]>();\nlet voiceStatus = "Voice is off";
+let reconnectToken = saved.token ?? "";
+let gameState: GameState | undefined;
+let localVoice: MediaStream | undefined;
+const voicePeers = new Map<string, RTCPeerConnection>();
+const pendingIce = new Map<string, RTCIceCandidateInit[]>();
+let voiceStatus = "Voice is off";
 
 const esc = (value: string) => value.replace(/[&<>'"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[c]!));
 const roomCodeFromUrl = () => new URLSearchParams(location.search).get("room")?.toUpperCase() ?? "";
@@ -24,7 +30,15 @@ function render() { if (room && (room.phase === "starting" || room.phase === "ma
 }
 
 let arenaRenderer: THREE.WebGLRenderer | undefined;
-let arenaCamera: THREE.PerspectiveCamera | undefined;\nlet gameRenderer: THREE.WebGLRenderer | undefined;\nlet gameCamera: THREE.PerspectiveCamera | undefined;\nlet gameScene: THREE.Scene | undefined;\nconst gamePlayerMeshes = new Map<string, THREE.Group>();\nconst gameLootMeshes = new Map<string, THREE.Mesh>();\nconst heldKeys = new Set<string>();\nlet gameLoopStarted = false;\nlet lastInputSent = 0;
+let arenaCamera: THREE.PerspectiveCamera | undefined;
+let gameRenderer: THREE.WebGLRenderer | undefined;
+let gameCamera: THREE.PerspectiveCamera | undefined;
+let gameScene: THREE.Scene | undefined;
+const gamePlayerMeshes = new Map<string, THREE.Group>();
+const gameLootMeshes = new Map<string, THREE.Mesh>();
+const heldKeys = new Set<string>();
+let gameLoopStarted = false;
+let lastInputSent = 0;
 
 function renderArena() {
   if (!room) return;
