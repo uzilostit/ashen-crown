@@ -59,3 +59,24 @@ test("alliance invites are visible and accepted by the target", () => {
   assert.ok(a.allianceId && a.allianceId === b.allianceId);
   assert.equal(engine.snapshot(room.code)!.allianceInvites.length, 0);
 });
+
+test("snare traps injure opponents and splints repair broken legs", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player: first } = rooms.create("Aster", "pine", "scout");
+  const second = rooms.join(room.code, "Rowan", "salt", "warden").player;
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const a = state.players.find(p => p.id === first.id)!;
+  const b = state.players.find(p => p.id === second.id)!;
+  a.inventory.push({ item: "snare", count: 1 });
+  b.x = a.x + 0.5; b.z = a.z;
+  engine.action(room.code, first.id, { type: "use", slot: 1 }, 500);
+  assert.equal(state.traps.length, 1);
+  engine.tick(room, 551);
+  assert.equal(b.brokenLeg, true);
+  assert.ok(b.health < 100);
+  b.inventory.push({ item: "splint", count: 1 });
+  engine.action(room.code, second.id, { type: "use", slot: 1 }, 900);
+  assert.equal(b.brokenLeg, false);
+});
