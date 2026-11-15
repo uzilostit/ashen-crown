@@ -39,10 +39,33 @@ function mount(isHost:boolean){
   const floor=new THREE.Mesh(new THREE.CircleGeometry(92,128),new THREE.MeshStandardMaterial({color:"#59624a",roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.12;floor.receiveShadow=true;scene.add(floor);
   const biomes=["#71836a","#a85f43","#385f4a","#c6b58a","#8ca9b4","#8d665d"];
   for(let i=0;i<6;i++){const start=i*Math.PI/3-Math.PI/6;const shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(Math.cos(start)*90,Math.sin(start)*90);for(let j=1;j<=20;j++){const a=start+Math.PI/3*j/20;shape.lineTo(Math.cos(a)*90,Math.sin(a)*90);}shape.lineTo(0,0);const tile=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:biomes[i],roughness:1,side:THREE.DoubleSide,transparent:true,opacity:.82}));tile.rotation.x=-Math.PI/2;tile.position.y=-.04;tile.receiveShadow=true;scene.add(tile);}
+  // Ancient radial causeways, broken boundary walls, and six biome landmarks give the arena a readable sense of scale.
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    const road=new THREE.Mesh(new THREE.BoxGeometry(5.5,.12,62),new THREE.MeshStandardMaterial({color:"#82765a",roughness:1}));
+    road.position.set(Math.cos(a)*39,.015,Math.sin(a)*39);road.rotation.y=-a;scene!.add(road);
+    const plinth=new THREE.Mesh(new THREE.CylinderGeometry(3.1,4.2,2.4,7),new THREE.MeshStandardMaterial({color:"#625c4a",roughness:1}));
+    plinth.position.set(Math.cos(a)*76,1.2,Math.sin(a)*76);scene!.add(plinth);
+    const shard=new THREE.Mesh(new THREE.DodecahedronGeometry(3.2,0),new THREE.MeshStandardMaterial({color:["#829077","#b16a4b","#466d58","#d4c49b","#9cbac5","#a87970"][i],roughness:1,flatShading:true}));
+    shard.scale.set(.7,1.8,.7);shard.position.set(Math.cos(a)*76,4.2,Math.sin(a)*76);scene!.add(shard);
+    for(let j=0;j<5;j++){const x=Math.cos(a)* (44+j*5),z=Math.sin(a)*(44+j*5);const stone=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.1,1.8),new THREE.MeshStandardMaterial({color:"#716b58",roughness:1}));stone.position.set(x,.45,z);stone.rotation.y=a+j*.7;scene!.add(stone);}
+  }
+  // Scatter deterministic rock clusters and scrub so the terrain is not a set of six flat wedges.
+  for(let i=0;i<180;i++){
+    const angle=i*2.399963, radius=17+(i*37%6900)/100;
+    if(radius>87)continue;
+    const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.45+(i%5)*.16,0),new THREE.MeshStandardMaterial({color:i%3===0?"#77715e":"#555b49",roughness:1,flatShading:true}));
+    rock.position.set(x,.25,z);rock.rotation.set(i*.3,i*.7,i*.2);rock.scale.y=.55;scene!.add(rock);
+    if(i%3===0){const shrub=new THREE.Mesh(new THREE.IcosahedronGeometry(.65+(i%4)*.12,0),new THREE.MeshStandardMaterial({color:i%2?"#465c40":"#68734b",roughness:1,flatShading:true}));shrub.position.set(x+1,.45,z-.8);shrub.scale.y=.65;scene!.add(shrub);}
+  }
+  // A shallow dark-water moat and a broken outer ring frame the playable island.
+  const moat=new THREE.Mesh(new THREE.TorusGeometry(96,5,8,192),new THREE.MeshStandardMaterial({color:"#34494a",roughness:.35,metalness:.12,transparent:true,opacity:.9}));
+  moat.rotation.x=Math.PI/2;moat.position.y=-.45;scene!.add(moat);
   const ring=new THREE.Mesh(new THREE.TorusGeometry(88,.32,8,192),new THREE.MeshBasicMaterial({color:"#e8d28a"}));ring.rotation.x=Math.PI/2;ring.position.y=.2;ring.name="safe-ring";scene.add(ring);
   const camp=new THREE.Mesh(new THREE.CylinderGeometry(11,12,2,8),new THREE.MeshStandardMaterial({color:"#b99b61"}));camp.position.y=.8;camp.rotation.y=Math.PI/6;scene.add(camp);
   const fire=new THREE.Mesh(new THREE.ConeGeometry(1.2,4.4,9),new THREE.MeshStandardMaterial({color:"#e78b3d",emissive:"#8d3d12",emissiveIntensity:1}));fire.position.y=3.8;scene.add(fire);
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;for(let j=0;j<9;j++){const r=68+(j%3)*5;const tree=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.28,1.8,5),new THREE.MeshStandardMaterial({color:"#594735"}));trunk.position.y=.9;const crown=new THREE.Mesh(new THREE.ConeGeometry(1.1,3,5),new THREE.MeshStandardMaterial({color:Object.values(color)[i]}));crown.position.y=2.8;tree.add(trunk,crown);tree.position.set(Math.cos(a+(j-4)*.09)*r,0,Math.sin(a+(j-4)*.09)*r);scene!.add(tree);}}
+  for(let i=0;i<6;i++){const a=i*Math.PI/3;for(let j=0;j<18;j++){const r=58+(j%5)*5;const tree=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.28,1.8,5),new THREE.MeshStandardMaterial({color:"#594735"}));trunk.position.y=.9;const crown=new THREE.Mesh(new THREE.ConeGeometry(1.1,3,5),new THREE.MeshStandardMaterial({color:Object.values(color)[i]}));crown.position.y=2.8;tree.add(trunk,crown);tree.position.set(Math.cos(a+(j-8.5)*.045)*r,0,Math.sin(a+(j-4)*.09)*r);scene!.add(tree);}}
   const resize=()=>{if(!camera||!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);};window.addEventListener("resize",resize);
   window.addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift","q"," "].includes(k)){keys.add(k);e.preventDefault();}});
   window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
