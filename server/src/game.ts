@@ -24,7 +24,8 @@ export class GameEngine {
     this.friendlyFire.set(room.code,room.settings.friendlyFire);
     this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
   }
-  get(code:string){return this.states.get(code);}\n  setConnected(code:string,id:string,connected:boolean){const p=this.states.get(code)?.players.find(x=>x.id===id);if(p)p.connected=connected;}
+  get(code:string){return this.states.get(code);}
+  setConnected(code:string,id:string,connected:boolean){const p=this.states.get(code)?.players.find(x=>x.id===id);if(p)p.connected=connected;}
   input(code:string,id:string,input:GameInput){const s=this.states.get(code),p=s?.players.find(x=>x.id===id&&x.alive);if(!p)return;this.inputs.set(code+":"+id,{x:clamp(input.x,-1,1),z:clamp(input.z,-1,1),yaw:input.yaw,sprint:!!input.sprint});}
   action(code:string,id:string,action:GameAction,now=Date.now()){
     const s=this.states.get(code),p=s?.players.find(x=>x.id===id&&x.alive);if(!s||!p||s.phase==="ended")return;
