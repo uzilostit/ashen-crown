@@ -11,7 +11,8 @@ export class GameEngine {
   private states=new Map<string,GameState>();
   private inputs=new Map<string,GameInput>();
   private lastAction=new Map<string,number>();
-  private invites=new Map<string,{fromId:string;toId:string}>();\n  private friendlyFire=new Map<string,boolean>();
+  private invites=new Map<string,{fromId:string;toId:string}>();
+  private friendlyFire=new Map<string,boolean>();
   start(room:Room,now=Date.now()) {
     const players:GamePlayer[]=[...room.players.values()].filter(p=>p.connected).map((p,i)=>{
       const a=i*Math.PI*2/Math.max(1,room.players.size);
@@ -20,7 +21,8 @@ export class GameEngine {
     const loot:LootDrop[]=[];
     for(let i=0;i<48;i++){const a=i*2.399963,r=5+(i%8)*3;loot.push({id:randomUUID(),item:items[i%items.length],count:items[i%items.length]==="arrows"?6:1,x:Math.cos(a)*r,z:Math.sin(a)*r});}
     const length=room.settings.matchLengthMinutes*60_000;
-    this.friendlyFire.set(room.code,room.settings.friendlyFire);\n    this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
+    this.friendlyFire.set(room.code,room.settings.friendlyFire);
+    this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
   }
   get(code:string){return this.states.get(code);}
   input(code:string,id:string,input:GameInput){const s=this.states.get(code),p=s?.players.find(x=>x.id===id&&x.alive);if(!p)return;this.inputs.set(code+":"+id,{x:clamp(input.x,-1,1),z:clamp(input.z,-1,1),yaw:input.yaw,sprint:!!input.sprint});}
