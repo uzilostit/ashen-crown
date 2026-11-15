@@ -96,3 +96,21 @@ test("eliminated players can spend patron points on a parachute gift", () => {
   assert.equal(spectator.patronPoints, 0);
   assert.ok(living.inventory.some(x => x.item === "ration"));
 });
+
+test("blocking reduces damage and a timed dodge avoids an attack", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player: first } = rooms.create("Aster", "pine", "scout");
+  const second = rooms.join(room.code, "Rowan", "salt", "warden").player;
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const a = state.players.find(p => p.id === first.id)!;
+  const b = state.players.find(p => p.id === second.id)!;
+  b.x = a.x + 1; b.z = a.z;
+  engine.input(room.code, second.id, { x: 0, z: 0, yaw: 0, sprint: false, block: true, dodge: false }, 1000);
+  engine.action(room.code, first.id, { type: "attack", targetId: second.id }, 1100);
+  assert.equal(b.health, 92);
+  engine.input(room.code, second.id, { x: 0, z: 0, yaw: 0, sprint: false, block: false, dodge: true }, 2100);
+  engine.action(room.code, first.id, { type: "attack", targetId: second.id }, 2200);
+  assert.equal(b.health, 92);
+});
