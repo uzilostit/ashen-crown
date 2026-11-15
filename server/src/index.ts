@@ -48,7 +48,7 @@ wss.on("connection", ws => {
 setInterval(() => rooms.prune(), 10_000).unref();
 setInterval(() => {
   for (const room of rooms.advance()) { if (room.phase === "match") game.start(room); broadcast(room); }
-  for (const room of rooms.rooms.values()) if (room.phase === "match") { game.tick(room); broadcastGame(room); }
+  for (const room of rooms.rooms.values()) if (room.phase === "match") { game.tick(room); broadcastGame(room); if (game.get(room.code)?.phase === "ended") { room.phase = "ended"; broadcast(room); } }
 }, 50).unref();
 http.listen(port, () => console.log(`ASHEN CROWN server at http://localhost:${port}`));
 
