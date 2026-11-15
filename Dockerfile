@@ -16,5 +16,6 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/client ./client
 COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/shared ./shared
+COPY --from=build /app/config ./config
 EXPOSE 3000
 CMD ["npm","start"]
