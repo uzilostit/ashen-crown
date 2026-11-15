@@ -38,7 +38,7 @@ wss.on("connection", ws => {
       const message = JSON.parse(data.toString()) as ClientMessage;
       const current = clients.get(ws);
       if (message.type === "create-room") { if (current) throw new RoomError("Already in a room."); const { room, player } = rooms.create(message.name, message.hearth, message.look); clients.set(ws, { room, playerId: player.id }); send(ws, { type: "welcome", playerId: player.id, reconnectToken: player.reconnectToken, room: rooms.view(room) }); broadcast(room); return; }
-      if (message.type === "join-room") { if (current) throw new RoomError("Already in a room."); const joined = rooms.join(message.code, message.name, message.hearth, message.look, message.reconnectToken); clients.set(ws, { room: joined.room, playerId: joined.player.id }); send(ws, { type: "welcome", playerId: joined.player.id, reconnectToken: joined.player.reconnectToken, room: rooms.view(joined.room) }); broadcast(joined.room); return; }
+      if (message.type === "join-room") { if (current) throw new RoomError("Already in a room."); const joined = rooms.join(message.code, message.name, message.hearth, message.look, message.reconnectToken); clients.set(ws, { room: joined.room, playerId: joined.player.id }); if (joined.reconnected) game.setConnected(joined.room.code, joined.player.id, true); send(ws, { type: "welcome", playerId: joined.player.id, reconnectToken: joined.player.reconnectToken, room: rooms.view(joined.room) }); broadcast(joined.room); return; }
       if (!current) throw new RoomError("Create or join a room first.");
       if (message.type === "voice-signal") { const target=[...clients].find(([,c])=>c.room===current.room&&c.playerId===message.targetId); if(target) send(target[0],{type:"voice-signal",fromId:current.playerId,signal:message.signal}); return; }
       if (message.type === "game-input") { game.input(current.room.code, current.playerId, message.input); return; }
@@ -46,7 +46,7 @@ wss.on("connection", ws => {
       rooms.update(current.room, current.playerId, message); broadcast(current.room);
     } catch (error) { send(ws, { type: "error", message: error instanceof Error ? error.message : "Invalid message." }); }
   });
-  ws.on("close", () => { const state = clients.get(ws); clients.delete(ws); if (!state) return; rooms.disconnect(state.room, state.playerId); broadcast(state.room); });
+  ws.on("close", () => { const state = clients.get(ws); clients.delete(ws); if (!state) return; rooms.disconnect(state.room, state.playerId); game.setConnected(state.room.code, state.playerId, false); broadcast(state.room); });
 });
 setInterval(() => rooms.prune(), 10_000).unref();
 setInterval(() => {
