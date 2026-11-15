@@ -7,7 +7,7 @@ const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 const distance=(a:{x:number;z:number},b:{x:number;z:number})=>Math.hypot(a.x-b.x,a.z-b.z);
 const items: ItemId[]=["spear","bow","arrows","axe","crossbow","bandage","splint","healthKit","waterBottle","ration","backpack","flareGun","torch","snare"];
 const announcer=JSON.parse(readFileSync(new URL("../../config/announcer.json",import.meta.url),"utf8")) as Record<string,string[]>;
-const herald=(event:string,values:Record<string,string>={})=>{const lines=announcer[event]??[];const line=lines[Math.floor(Math.random()*Math.max(1,lines.length))]??"The Herald watches.";return line.replace(/\\{(\\w+)\\}/g,(_,key:string)=>values[key]??"");};
+const herald=(event:string,values:Record<string,string>={})=>{const lines=announcer[event]??[];const line=lines[Math.floor(Math.random()*Math.max(1,lines.length))]??"The Herald watches.";return ["name","hearth","count","zone"].reduce((text,key)=>text.replaceAll("{"+key+"}",values[key]??""),line);};
 const limits:Record<ItemId,number>={dagger:1,spear:1,bow:1,arrows:12,axe:1,crossbow:1,bandage:4,splint:2,healthKit:2,waterBottle:3,ration:3,backpack:1,flareGun:1,torch:1,snare:2};
 
 export class GameEngine {
