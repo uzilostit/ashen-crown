@@ -50,7 +50,7 @@ function mount(isHost:boolean){
   const terrain=new THREE.PlaneGeometry(188,188,120,120);const positions=terrain.attributes.position as THREE.BufferAttribute;const colors:number[]=[];
   const palette=biome.map(c=>new THREE.Color(c));
   for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=-positions.getY(i),r=Math.hypot(x,z),a=(Math.atan2(z,x)+Math.PI*2)%(Math.PI*2),sector=Math.floor(a/(Math.PI/3))%6,n=Math.sin(x*.13+z*.07)*.55+Math.cos(z*.19-x*.09)*.35;
-    const height=(Math.sin(x*.075)*Math.cos(z*.09)*1.2+Math.sin((x+z)*.16)*.35)*(r<14?.18:1);positions.setZ(i,height);
+    const height=(Math.sin(x*.075)*Math.cos(z*.09)*.32+Math.sin((x+z)*.16)*.12)*(r<14?.18:1);positions.setZ(i,height);
     const base=palette[sector].clone(),next=palette[(sector+1)%6],blend=(a%(Math.PI/3))/(Math.PI/3),edge=Math.min(1,Math.max(0,(r-10)/20));base.lerp(next,blend*.35).multiplyScalar(.83+n*.055+edge*.08);colors.push(base.r,base.g,base.b);
   }
   terrain.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));terrain.computeVertexNormals();
