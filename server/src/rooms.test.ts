@@ -33,3 +33,14 @@ test("Winnowing starts after the authoritative 15-second countdown", () => {
   assert.deepEqual(manager.advance(), [room]);
   assert.equal(room.phase, "match");
 });
+
+test("a disconnected player can reconnect after the match starts", () => {
+  const manager = new RoomManager(() => 100, () => "CROWN7");
+  const { room, player } = manager.create("Aster", "pine", "scout");
+  room.phase = "match";
+  manager.disconnect(room, player.id);
+  const joined = manager.join(room.code, "Ignored", "salt", "warden", player.reconnectToken);
+  assert.equal(joined.reconnected, true);
+  assert.equal(joined.player.id, player.id);
+  assert.equal(joined.player.connected, true);
+});
