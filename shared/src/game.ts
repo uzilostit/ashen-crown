@@ -1,6 +1,6 @@
 import type { Hearth } from "./index.js";
 
-export type ItemId = "dagger" | "spear" | "bow" | "arrows" | "axe" | "crossbow" | "bandage" | "healthKit" | "waterBottle" | "ration" | "backpack" | "flareGun" | "torch" | "snare";
+export type ItemId = "dagger" | "spear" | "bow" | "arrows" | "axe" | "crossbow" | "bandage" | "splint" | "healthKit" | "waterBottle" | "ration" | "backpack" | "flareGun" | "torch" | "snare";
 export interface InventoryStack { item: ItemId; count: number }
 export interface GamePlayer {
   id: string; name: string; hearth: Hearth; look: string; connected: boolean;
@@ -9,11 +9,11 @@ export interface GamePlayer {
   alive: boolean; escaped: boolean; inventory: InventoryStack[];
   allianceId: string | null; bleeding: number; brokenLeg: boolean;
 }
-export interface LootDrop { id: string; item: ItemId; count: number; x: number; z: number }
+export interface LootDrop { id: string; item: ItemId; count: number; x: number; z: number }\nexport interface Trap { id: string; ownerId: string; x: number; z: number }
 export interface GameState {
   phase: "countdown" | "playing" | "flare" | "helicopter" | "ended";
   startedAt: number; endsAt: number; players: GamePlayer[];
-  loot: LootDrop[]; allianceInvites: { fromId: string; toId: string }[]; zone: { safeRadius: number; warningZone: number | null; collapseAt: number | null; collapsed: number[]; nextCollapseAt: number };
+  loot: LootDrop[]; traps: Trap[]; allianceInvites: { fromId: string; toId: string }[]; zone: { safeRadius: number; warningZone: number | null; collapseAt: number | null; collapsed: number[]; nextCollapseAt: number };
   flare: { x: number; z: number; shooterId: string; helicopterAt: number } | null;
   helicopter: { x: number; z: number; leavesAt: number } | null;
   winnerId: string | null; message: string;
