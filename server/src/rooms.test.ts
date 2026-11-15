@@ -17,12 +17,11 @@ test("host migrates when host disconnects", () => {
 });
 
 
-test("Winnowing starts after the authoritative 15-second countdown", () => {
+test("Winnowing starts with only two connected and ready players after the 15-second countdown", () => {
   let now = 100;
   const manager = new RoomManager(() => now, () => "CROWN7");
   const { room, player: host } = manager.create("Aster", "pine", "scout");
-  const players = [host];
-  for (let i = 1; i < 5; i++) players.push(manager.join(room.code, "Player" + i, "marsh", "scout").player);
+  const players = [host, manager.join(room.code, "Player2", "marsh", "scout").player];
   for (const player of players) manager.update(room, player.id, { type: "set-ready", ready: true });
   manager.update(room, host.id, { type: "start-match" });
   assert.equal(room.phase, "starting");
