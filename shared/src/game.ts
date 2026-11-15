@@ -9,7 +9,8 @@ export interface GamePlayer {
   alive: boolean; escaped: boolean; inventory: InventoryStack[];
   allianceId: string | null; bleeding: number; brokenLeg: boolean;
 }
-export interface LootDrop { id: string; item: ItemId; count: number; x: number; z: number }\nexport interface Trap { id: string; ownerId: string; x: number; z: number }
+export interface LootDrop { id: string; item: ItemId; count: number; x: number; z: number }
+export interface Trap { id: string; ownerId: string; x: number; z: number }
 export interface GameState {
   phase: "countdown" | "playing" | "flare" | "helicopter" | "ended";
   startedAt: number; endsAt: number; players: GamePlayer[];
