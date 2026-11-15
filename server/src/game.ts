@@ -5,7 +5,7 @@ import type { Room } from "./rooms.js";
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 const distance=(a:{x:number;z:number},b:{x:number;z:number})=>Math.hypot(a.x-b.x,a.z-b.z);
 const items: ItemId[]=["spear","bow","arrows","axe","crossbow","bandage","splint","healthKit","waterBottle","ration","backpack","flareGun","torch","snare"];
-const limits:Record<ItemId,number>={dagger:1,spear:1,bow:1,arrows:12,axe:1,crossbow:1,bandage:4,healthKit:2,waterBottle:3,ration:3,backpack:1,flareGun:1,torch:1,snare:2};
+const limits:Record<ItemId,number>={dagger:1,spear:1,bow:1,arrows:12,axe:1,crossbow:1,bandage:4,splint:2,healthKit:2,waterBottle:3,ration:3,backpack:1,flareGun:1,torch:1,snare:2};
 
 export class GameEngine {
   private states=new Map<string,GameState>();
@@ -13,6 +13,7 @@ export class GameEngine {
   private lastAction=new Map<string,number>();
   private invites=new Map<string,{fromId:string;toId:string}>();
   private friendlyFire=new Map<string,boolean>();
+  private collapseSpeeds=new Map<string,number>();
   start(room:Room,now=Date.now()) {
     const players:GamePlayer[]=[...room.players.values()].filter(p=>p.connected).map((p,i)=>{
       const a=i*Math.PI*2/Math.max(1,room.players.size);
@@ -23,6 +24,7 @@ export class GameEngine {
     const length=room.settings.matchLengthMinutes*60_000;
     const collapseMultiplier=room.settings.collapseSpeed==="slow"?1.25:room.settings.collapseSpeed==="fast"?0.75:1;
     this.friendlyFire.set(room.code,room.settings.friendlyFire);
+    this.collapseSpeeds.set(room.code,collapseMultiplier);
     this.states.set(room.code,{phase:"playing",startedAt:now,endsAt:now+length,players,loot,traps:[],allianceInvites:[],zone:{safeRadius:40,warningZone:null,collapseAt:null,collapsed:[],nextCollapseAt:now+Math.max(60_000,length/6*collapseMultiplier)},flare:null,helicopter:null,winnerId:null,message:"The Winnowing has begun. The Council is watching."});
   }
   get(code:string){return this.states.get(code);}
@@ -45,6 +47,7 @@ export class GameEngine {
   tick(room:Room,now=Date.now()){
     const s=this.states.get(room.code);if(!s||s.phase==="ended")return;
     const dt=0.05;
+    const collapseMultiplier=this.collapseSpeeds.get(room.code)??1;
     for(const p of s.players){if(!room.players.has(p.id)){p.alive=false;continue;}if(!p.alive||p.escaped)continue;const input=p.connected?(this.inputs.get(room.code+":"+p.id)??{x:0,z:0,yaw:p.yaw,sprint:false}):{x:0,z:0,yaw:p.yaw,sprint:false};if(p.connected)p.yaw=input.yaw;const mag=Math.hypot(input.x,input.z)||1;const speed=input.sprint&&p.stamina>0&&!p.brokenLeg?8.2:p.brokenLeg?3.2:5.1;p.x=clamp(p.x+input.x/mag*speed*dt,-43,43);p.z=clamp(p.z+input.z/mag*speed*dt,-43,43);p.stamina=clamp(p.stamina+(input.sprint?-18:12)*dt,0,100);p.hunger=clamp(p.hunger-0.025*dt,0,100);p.thirst=clamp(p.thirst-0.04*dt,0,100);if(p.hunger===0||p.thirst===0)p.health-=0.15;if(p.bleeding>0){p.health-=p.bleeding*dt;p.bleeding=Math.max(0,p.bleeding-0.01*dt);}if(Math.hypot(p.x,p.z)>s.zone.safeRadius){p.health-=5*dt;}for(const trap of s.traps){if(trap.ownerId!==p.id&&distance(p,trap)<1.4){p.health-=30;p.bleeding=0.5;p.brokenLeg=true;s.traps=s.traps.filter(x=>x.id!==trap.id);s.message=p.name+" was caught in a snare.";break;}}if(p.health<=0){p.health=0;p.alive=false;for(const stack of p.inventory)if(stack.item!=="dagger")s.loot.push({id:randomUUID(),item:stack.item,count:stack.count,x:p.x,z:p.z});p.inventory=p.inventory.filter(x=>x.item==="dagger");s.message=p.name+" has fallen."; }}
     if(s.zone.warningZone===null&&now>=s.zone.nextCollapseAt&&s.zone.collapsed.length<5){s.zone.warningZone=s.zone.collapsed.length;s.zone.collapseAt=now+60_000;s.message=["Marsh","Cinder Flats","Pine Forest","Salt Dunes","Frost Ridge","Orchard Ruins"][s.zone.warningZone]+" will collapse in sixty seconds. Move to safety.";}
     if(s.zone.warningZone!==null&&s.zone.collapseAt!==null&&now>=s.zone.collapseAt){s.zone.collapsed.push(s.zone.warningZone);s.zone.warningZone=null;s.zone.collapseAt=null;s.zone.safeRadius=Math.max(8,s.zone.safeRadius-6);s.zone.nextCollapseAt=now+Math.max(45_000,(room.settings.matchLengthMinutes*60_000)/6*collapseMultiplier);s.message="The toxic boundary advances."; }
