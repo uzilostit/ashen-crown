@@ -35,6 +35,7 @@ export class GameEngine {
     if(action.type==="ally-invite"){const t=s.players.find(x=>x.id===action.targetId&&x.alive);if(!t||t.id===p.id||distance(p,t)>5||p.allianceId||t.allianceId)return;this.invites.set(code+":"+t.id,{fromId:p.id,toId:t.id});s.message=p.name+" offered an alliance to "+t.name+".";}
     if(action.type==="ally-respond"){const inv=this.invites.get(code+":"+p.id);if(!inv||inv.fromId!==action.fromId)return;this.invites.delete(code+":"+p.id);const other=s.players.find(x=>x.id===inv.fromId);if(action.accept&&other?.alive&&!other.allianceId){const alliance=randomUUID();other.allianceId=alliance;p.allianceId=alliance;s.message=other.name+" and "+p.name+" have formed an alliance.";}}
     if(action.type==="leave-alliance"){const id=p.allianceId;if(id){for(const member of s.players)if(member.allianceId===id)member.allianceId=null;s.message=p.name+" has left their alliance.";}}
+    if(action.type==="board-helicopter"&&s.phase==="helicopter"&&s.helicopter&&distance(p,s.helicopter)<6){const escaped=s.players.filter(x=>x.escaped).length;if(escaped<2){p.escaped=true;s.message=p.name+" has boarded the helicopter.";}}
   }
   tick(room:Room,now=Date.now()){
     const s=this.states.get(room.code);if(!s||s.phase==="ended")return;
@@ -43,8 +44,8 @@ export class GameEngine {
     if(s.zone.warningZone===null&&now>=s.zone.nextCollapseAt&&s.zone.collapsed.length<5){s.zone.warningZone=s.zone.collapsed.length;s.zone.collapseAt=now+60_000;s.message="A zone collapse has been announced. Move to safety.";}
     if(s.zone.warningZone!==null&&s.zone.collapseAt!==null&&now>=s.zone.collapseAt){s.zone.collapsed.push(s.zone.warningZone);s.zone.warningZone=null;s.zone.collapseAt=null;s.zone.safeRadius=Math.max(8,s.zone.safeRadius-6);s.zone.nextCollapseAt=now+Math.max(45_000,(room.settings.matchLengthMinutes*60_000)/6);s.message="The toxic boundary advances."; }
     if(s.phase==="flare"&&s.flare&&now>=s.flare.helicopterAt){s.phase="helicopter";s.helicopter={x:s.flare.x,z:s.flare.z,leavesAt:now+30_000};s.message="The helicopter has arrived. Two seats remain.";}
-    if(s.phase==="helicopter"&&s.helicopter&&now>=s.helicopter.leavesAt){s.phase="ended";s.message="The helicopter has departed.";}
-    const alive=s.players.filter(p=>p.alive&&!p.escaped);if(alive.length===1&&s.phase!=="ended"){s.phase="ended";s.winnerId=alive[0].id;s.message=alive[0].name+" is the last Kindled standing.";}if(now>=s.endsAt&&s.phase!=="ended"){s.phase="ended";s.winnerId=alive[0]?.id??null;s.message="The Winnowing has ended.";}
+    if(s.phase==="helicopter"&&s.helicopter&&now>=s.helicopter.leavesAt){s.phase="ended";const escaped=s.players.filter(p=>p.escaped);s.winnerId=escaped[0]?.id??null;s.message="The helicopter has departed. "+escaped.length+" Kindled escaped."; }
+    const alive=s.players.filter(p=>p.alive&&!p.escaped);if(alive.length===1&&s.phase!=="ended"&&s.phase!=="helicopter"){s.phase="ended";s.winnerId=alive[0].id;s.message=alive[0].name+" is the last Kindled standing.";}if(now>=s.endsAt&&s.phase!=="ended"){s.phase="ended";s.winnerId=alive[0]?.id??null;s.message="The Winnowing has ended.";}
   }
   snapshot(code:string):GameState|undefined{const s=this.states.get(code);return s?structuredClone(s):undefined;}
 }
