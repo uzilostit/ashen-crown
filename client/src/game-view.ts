@@ -51,7 +51,8 @@ function mount(isHost:boolean){
   document.querySelector("#loot")?.addEventListener("click",loot);
   document.querySelector("#flare")?.addEventListener("click",()=>sendMessage({type:"game-action",action:current?.phase==="helicopter"?{type:"board-helicopter"}:{type:"flare"}}));
   document.querySelector("#ally")?.addEventListener("click",invite);
-  document.querySelector("#ping")?.addEventListener("click",()=>sendMessage({type:"game-action",action:current?.players.find(p=>p.id===selfId)?.alive?{type:"emote",text:"Enemy spotted"}:{type:"spectator-chat",text:"Good luck, Kindled"}}));\n  document.querySelector("#gift")?.addEventListener("click",()=>{const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(me&&!me.alive&&target)sendMessage({type:"game-action",action:{type:"spectator-gift",targetId:target.id,item:"ration"}});});
+  document.querySelector("#ping")?.addEventListener("click",()=>sendMessage({type:"game-action",action:current?.players.find(p=>p.id===selfId)?.alive?{type:"emote",text:"Enemy spotted"}:{type:"spectator-chat",text:"Good luck, Kindled"}}));
+  document.querySelector("#gift")?.addEventListener("click",()=>{const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(me&&!me.alive&&target)sendMessage({type:"game-action",action:{type:"spectator-gift",targetId:target.id,item:"ration"}});});
   const voice=document.querySelector<HTMLButtonElement>("#voice");voice?.addEventListener("click",()=>{if(!mic)void enableVoice();});
   voice?.addEventListener("pointerdown",()=>{if(mic)for(const t of mic.getAudioTracks())t.enabled=true;});
   for(const ev of ["pointerup","pointerleave","pointercancel"])voice?.addEventListener(ev,()=>{if(mic)for(const t of mic.getAudioTracks())t.enabled=false;});
