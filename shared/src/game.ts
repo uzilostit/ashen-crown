@@ -34,7 +34,9 @@ export type GameAction =
  | { type: "spectator-gift"; targetId: string; item: "ration" | "waterBottle" | "bandage" }
  | { type: "spectator-chat"; text: string };
 
-\nexport interface WorldObstacle { x:number; z:number; radius:number; kind:"tree"|"rock"|"stump" }\n
+
+export interface WorldObstacle { x:number; z:number; radius:number; kind:"tree"|"rock"|"stump" }
+
 // Deterministic arena collision layout shared by the server and renderer.
 export const WORLD_OBSTACLES: WorldObstacle[] = Array.from({length:92},(_,i)=>{
   const angle=i*2.399963229728653;
