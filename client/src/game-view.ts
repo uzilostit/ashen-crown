@@ -34,10 +34,10 @@ function mount(isHost:boolean){
   if(!root)return;
   root.innerHTML=`<div id="game" class="game-screen"><div class="game-top"><div><span class="game-kicker">THE REGENT COUNCIL PRESENTS</span><strong>ASHEN CROWN</strong></div><div id="game-message">Quillwood is watching.</div><canvas id="minimap" width="160" height="160" aria-label="Arena minimap"></canvas></div><div class="game-bottom"><div class="stat-panel" id="stats"></div><div class="inventory-panel" id="inventory"></div><div class="game-actions"><button id="attack">STRIKE</button><button id="loot">LOOT</button><button id="flare">FLARE</button><button id="ally">ALLY</button><button id="voice">VOICE</button><button id="ping">PING</button><button id="gift">GIFT</button></div></div><div class="mobile-controls"><div class="move-zone"><div id="stick-base"><div id="stick-knob"></div></div><span>MOVE</span></div><div class="action-cluster"><button id="mobile-dodge" class="round-action">DODGE</button><button id="mobile-attack" class="round-action primary-action">⚔</button><button id="mobile-block" class="round-action">BLOCK</button><button id="mobile-run" class="round-action">RUN</button></div><div class="camera-hint">DRAG TO LOOK</div></div><div id="game-result" class="game-result" hidden></div></div>`;
   scene=new THREE.Scene();
-  scene.background=new THREE.Color("#a9b5aa");scene.fog=new THREE.FogExp2("#a9b5aa",.0028);
+  scene.background=new THREE.Color("#9aafa1");scene.fog=new THREE.FogExp2("#9aafa1",.00235);
   camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,520);
   renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.65));renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,matchMedia("(pointer:coarse)").matches?1.3:1.65));renderer.setSize(innerWidth,innerHeight);
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
   renderer.domElement.className="game-canvas";document.querySelector("#game")!.prepend(renderer.domElement);
@@ -46,12 +46,12 @@ function mount(isHost:boolean){
   const fill=new THREE.DirectionalLight(0x9bb9d2,.8);fill.position.set(45,24,-48);scene.add(fill);
   const mat=(c:string,r=1,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
   const hex=new THREE.Mesh(new THREE.CylinderGeometry(94,100,5,6),mat("#202a25",.96));hex.position.y=-2.5;hex.rotation.y=Math.PI/6;hex.receiveShadow=true;scene.add(hex);
-  const biome=["#344f3e","#76513f","#1e4439","#8a8060","#3f5e70","#60464b"];
+  const biome=["#426c48","#a65e3e","#285b49","#b09a62","#527f98","#80515d"];
   const terrain=new THREE.PlaneGeometry(188,188,120,120);const positions=terrain.attributes.position as THREE.BufferAttribute;const colors:number[]=[];
   const palette=biome.map(c=>new THREE.Color(c));
   for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=-positions.getY(i),r=Math.hypot(x,z),a=(Math.atan2(z,x)+Math.PI*2)%(Math.PI*2),sector=Math.floor(a/(Math.PI/3))%6,n=Math.sin(x*.13+z*.07)*.55+Math.cos(z*.19-x*.09)*.35;
     const height=(Math.sin(x*.075)*Math.cos(z*.09)*.32+Math.sin((x+z)*.16)*.12)*(r<14?.18:1);positions.setZ(i,height);
-    const base=palette[sector].clone(),next=palette[(sector+1)%6],blend=(a%(Math.PI/3))/(Math.PI/3),edge=Math.min(1,Math.max(0,(r-10)/20));base.lerp(next,blend*.35).multiplyScalar(.83+n*.055+edge*.08);colors.push(base.r,base.g,base.b);
+    const base=palette[sector].clone(),next=palette[(sector+1)%6],blend=(a%(Math.PI/3))/(Math.PI/3),edge=Math.min(1,Math.max(0,(r-10)/20));base.lerp(next,blend*.28).multiplyScalar(.94+n*.075+edge*.07);colors.push(base.r,base.g,base.b);
   }
   terrain.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));terrain.computeVertexNormals();
   const ground=new THREE.Mesh(terrain,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0}));ground.rotation.x=-Math.PI/2;ground.position.y=-.05;ground.receiveShadow=true;scene.add(ground);
