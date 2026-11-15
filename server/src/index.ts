@@ -42,5 +42,6 @@ wss.on("connection", ws => {
   ws.on("close", () => { const state = clients.get(ws); clients.delete(ws); if (!state) return; rooms.disconnect(state.room, state.playerId); broadcast(state.room); });
 });
 setInterval(() => rooms.prune(), 10_000).unref();
+setInterval(() => { for (const room of rooms.advance()) broadcast(room); }, 100).unref();
 http.listen(port, () => console.log(`ASHEN CROWN server at http://localhost:${port}`));
 
