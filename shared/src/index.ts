@@ -36,12 +36,12 @@ export type ClientMessage =
   | { type: "set-settings"; settings: RoomSettings }
   | { type: "start-match" }
   | { type: "kick-player"; playerId: string }
-  | { type: "play-again" };
+  | { type: "play-again" }\n  | { type: "game-input"; input: GameInput }\n  | { type: "game-action"; action: GameAction };
 export type ServerMessage =
   | { type: "welcome"; playerId: string; reconnectToken: string; room: RoomView }
   | { type: "room-update"; room: RoomView }
   | { type: "error"; message: string }
-  | { type: "notice"; message: string };
+  | { type: "notice"; message: string }\n  | { type: "game-state"; state: GameState };
 
 export const defaultSettings = (): RoomSettings => ({ matchLengthMinutes: 30, collapseSpeed: "standard", friendlyFire: false });
 export const makeRoomCode = (random: () => number = Math.random): string => Array.from({ length: 6 }, () => ROOM_CODE_ALPHABET[Math.floor(random() * ROOM_CODE_ALPHABET.length)]).join("");
