@@ -13,6 +13,7 @@ let inputTimer = 0;
 let lastInput = 0;
 const keys = new Set<string>();
 let stickX=0,stickY=0,cameraYaw=0,cameraPitch=0.28,cameraDistance=13,draggingCamera=false,lastPointerX=0,lastPointerY=0;
+const cameraLook=new THREE.Vector3();let cameraReady=false;
 const figures = new Map<string, THREE.Group>();
 const drops = new Map<string, THREE.Mesh>();
 const snares = new Map<string, THREE.Mesh>();
@@ -32,7 +33,7 @@ export function renderGame(host:HTMLElement,id:string,state:GameState,send:Send,
 }
 function mount(isHost:boolean){
   if(!root)return;
-  root.innerHTML=`<div id="game" class="game-screen"><div class="game-top"><div><span class="game-kicker">THE REGENT COUNCIL PRESENTS</span><strong>ASHEN CROWN</strong></div><div id="game-message">Quillwood is watching.</div><canvas id="minimap" width="160" height="160" aria-label="Arena minimap"></canvas></div><div class="game-bottom"><div class="stat-panel" id="stats"></div><div class="inventory-panel" id="inventory"></div><div class="game-actions"><button id="attack">STRIKE</button><button id="loot">LOOT</button><button id="flare">FLARE</button><button id="ally">ALLY</button><button id="voice">VOICE</button><button id="ping">PING</button><button id="gift">GIFT</button></div></div><div class="mobile-controls"><div class="move-zone"><div id="stick-base"><div id="stick-knob"></div></div><span>MOVE</span></div><div class="action-cluster"><button id="mobile-dodge" class="round-action">DODGE</button><button id="mobile-attack" class="round-action primary-action">⚔</button><button id="mobile-block" class="round-action">BLOCK</button><button id="mobile-run" class="round-action">RUN</button></div><div class="camera-hint">DRAG TO LOOK</div></div><div id="game-result" class="game-result" hidden></div></div>`;
+  root.innerHTML=`<div id="game" class="game-screen"><div class="game-top"><div><span class="game-kicker">THE REGENT COUNCIL PRESENTS</span><strong>ASHEN CROWN</strong></div><div class="top-tools"><div id="game-message">Quillwood is watching.</div><div class="zoom-tools" aria-label="Camera zoom"><button id="zoom-out" aria-label="Zoom out">−</button><button id="zoom-in" aria-label="Zoom in">+</button></div></div><canvas id="minimap" width="160" height="160" aria-label="Arena minimap"></canvas></div><div class="game-bottom"><div class="stat-panel" id="stats"></div><div class="inventory-panel" id="inventory"></div><div class="game-actions"><button id="attack">STRIKE</button><button id="loot">LOOT</button><button id="flare">FLARE</button><button id="ally">ALLY</button><button id="voice">VOICE</button><button id="ping">PING</button><button id="gift">GIFT</button></div></div><div class="mobile-controls"><div class="move-zone"><div id="stick-base"><div id="stick-knob"></div></div><span>MOVE</span></div><div class="action-cluster"><button id="mobile-dodge" class="round-action">DODGE</button><button id="mobile-attack" class="round-action primary-action">⚔</button><button id="mobile-block" class="round-action">BLOCK</button><button id="mobile-run" class="round-action">RUN</button></div><div class="camera-hint">DRAG TO LOOK</div></div><div id="game-result" class="game-result" hidden></div></div>`;
   scene=new THREE.Scene();
   scene.background=new THREE.Color("#9aafa1");scene.fog=new THREE.FogExp2("#9aafa1",.00235);
   camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,520);
@@ -99,6 +100,9 @@ function mount(isHost:boolean){
   stick?.addEventListener("pointermove",e=>{if(e.buttons)moveStick(e);});
   for(const ev of ["pointerup","pointercancel","lostpointercapture"])stick?.addEventListener(ev,()=>{stickX=0;stickY=0;if(knob)knob.style.transform="translate(0,0)";});
   function moveStick(e:PointerEvent){const r=stick!.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,len/42);stickX=dx/len*scale;stickY=dy/len*scale;if(knob)knob.style.transform=`translate(${stickX*42}px,${stickY*42}px)`;}
+  document.querySelector("#zoom-in")?.addEventListener("click",()=>{cameraDistance=Math.max(7,cameraDistance-1.5);});
+  document.querySelector("#zoom-out")?.addEventListener("click",()=>{cameraDistance=Math.min(25,cameraDistance+1.5);});
+  renderer.domElement.addEventListener("wheel",e=>{cameraDistance=Math.max(7,Math.min(25,cameraDistance+Math.sign(e.deltaY)*1.2));},{passive:true});
   document.querySelector("#mobile-attack")?.addEventListener("click",attack);document.querySelector("#mobile-dodge")?.addEventListener("pointerdown",()=>keys.add(" "));document.querySelector("#mobile-dodge")?.addEventListener("pointerup",()=>keys.delete(" "));
   document.querySelector("#mobile-block")?.addEventListener("pointerdown",()=>keys.add("q"));document.querySelector("#mobile-block")?.addEventListener("pointerup",()=>keys.delete("q"));
   document.querySelector("#mobile-run")?.addEventListener("pointerdown",()=>keys.add("shift"));document.querySelector("#mobile-run")?.addEventListener("pointerup",()=>keys.delete("shift"));
@@ -114,7 +118,7 @@ function mount(isHost:boolean){
   voice?.addEventListener("pointerdown",()=>{if(mic)for(const t of mic.getAudioTracks())t.enabled=true;});
   for(const ev of ["pointerup","pointerleave","pointercancel"])voice?.addEventListener(ev,()=>{if(mic)for(const t of mic.getAudioTracks())t.enabled=false;});
   if(!inputTimer)inputTimer=window.setInterval(sendInput,50);
-  renderer.setAnimationLoop(()=>{if(!renderer||!scene||!camera||!current)return;const me=current.players.find(p=>p.id===selfId);const target=me?.alive?me:current.players.filter(p=>p.alive&&!p.escaped).sort((a,b)=>dist(a,me??a)-dist(b,me??a))[0];if(target){const horizontal=Math.cos(cameraPitch)*cameraDistance;const desired=new THREE.Vector3(target.x*2+Math.sin(cameraYaw)*horizontal,3+Math.sin(cameraPitch)*cameraDistance,target.z*2+Math.cos(cameraYaw)*horizontal);camera.position.lerp(desired,.16);camera.lookAt(target.x*2,1.25,target.z*2);}renderer.render(scene,camera);});
+  const clock=new THREE.Clock();renderer.setAnimationLoop(()=>{if(!renderer||!scene||!camera||!current)return;const dt=Math.min(clock.getDelta(),.05),me=current.players.find(p=>p.id===selfId);const target=me?.alive?me:current.players.filter(p=>p.alive&&!p.escaped).sort((a,b)=>dist(a,me??a)-dist(b,me??a))[0];if(target){const tx=target.x*2,tz=target.z*2,horizontal=Math.cos(cameraPitch)*cameraDistance;const desired=new THREE.Vector3(tx+Math.sin(cameraYaw)*horizontal,3+Math.sin(cameraPitch)*cameraDistance,tz+Math.cos(cameraYaw)*horizontal);if(!cameraReady){camera.position.copy(desired);cameraLook.set(tx,1.25,tz);cameraReady=true;}else{const follow=1-Math.exp(-dt*11);camera.position.lerp(desired,follow);cameraLook.lerp(new THREE.Vector3(tx,1.25,tz),follow);}camera.lookAt(cameraLook);}const t=performance.now()/1000;for(const figure of figures.values()){const d=figure.userData as {moving?:number;phase?:number;armL?:THREE.Group;armR?:THREE.Group;legL?:THREE.Group;legR?:THREE.Group};const moving=d.moving??0,phase=(d.phase??0)+dt*(moving>0.08?11:2);d.phase=phase;const swing=Math.sin(phase)*(moving>0.08?.58:.025);if(d.legL)d.legL.rotation.x=swing;if(d.legR)d.legR.rotation.x=-swing;if(d.armL)d.armL.rotation.x=-swing*.62;if(d.armR)d.armR.rotation.x=swing*.62;figure.position.y=moving>0.08?Math.abs(Math.sin(phase*2))*.055:Math.sin(t*1.5)*.012;}renderer.render(scene,camera);});
 }
 function sendInput(){if(!current)return;const x=stickX+(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0),z=stickY+(keys.has("s")||keys.has("arrowdown")?1:0)-(keys.has("w")||keys.has("arrowup")?1:0);const forward=Math.cos(cameraYaw),right=Math.sin(cameraYaw),worldX=x*forward+z*right,worldZ=z*forward-x*right;const now=performance.now();if(now-lastInput<45)return;lastInput=now;sendMessage({type:"game-input",input:{x:worldX,z:worldZ,yaw:Math.atan2(worldX,worldZ),sprint:keys.has("shift"),block:keys.has("q"),dodge:keys.has(" ")}});}
 function attack(){const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive&&p.id!==selfId).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(target)sendMessage({type:"game-action",action:{type:"attack",targetId:target.id}});}
@@ -140,14 +144,14 @@ function updateScene(){
   const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.025,6,5),dark);eyeL.position.set(-.085,1.72,.278);
   const eyeR=eyeL.clone();eyeR.position.x=.085;
   const scarf=new THREE.Mesh(new THREE.ConeGeometry(.2,.48,5),trim);scarf.position.set(0,1.25,.2);scarf.rotation.x=-.8;
-  const armL=new THREE.Group(),armR=new THREE.Group();
+  const armL=new THREE.Group(),armR=new THREE.Group();armL.name="arm-left";armR.name="arm-right";
   for(const [arm,side] of [[armL,-1],[armR,1]] as const){
     const upper=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.43,6),paper);upper.position.y=-.19;upper.castShadow=true;
     const cuff=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.1,6),trim);cuff.position.y=-.4;
     const hand=new THREE.Mesh(new THREE.IcosahedronGeometry(.105,0),skin);hand.position.y=-.51;
     arm.add(upper,cuff,hand);arm.position.set(side*.43,1.25,0);arm.rotation.z=side*.12;
   }
-  const legL=new THREE.Group(),legR=new THREE.Group();
+  const legL=new THREE.Group(),legR=new THREE.Group();legL.name="leg-left";legR.name="leg-right";
   for(const [leg,side] of [[legL,-1],[legR,1]] as const){
     const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.43,6),leather);thigh.position.y=-.18;thigh.castShadow=true;
     const boot=new THREE.Mesh(new THREE.BoxGeometry(.24,.2,.38),dark);boot.position.set(0,-.45,.07);boot.castShadow=true;
@@ -160,7 +164,7 @@ function updateScene(){
   mesh.add(torso,chest,collar,belt,buckle,head,hood,face,eyeL,eyeR,scarf,armL,armR,legL,legR,pack,packFlap,shoulderCape,badge);
   mesh.traverse(o=>{if((o as THREE.Mesh).isMesh){(o as THREE.Mesh).castShadow=true;(o as THREE.Mesh).receiveShadow=true;}});
   scene.add(mesh);figures.set(p.id,mesh);
- }mesh.position.set(p.x*2,0,p.z*2);mesh.scale.setScalar(1.35);mesh.rotation.y=p.yaw;mesh.visible=p.alive&&!p.escaped;}
+ }const ud=mesh.userData as {lastX?:number;lastZ?:number;moving?:number;armL?:THREE.Group;armR?:THREE.Group;legL?:THREE.Group;legR?:THREE.Group};const dx=ud.lastX===undefined?0:p.x-ud.lastX,dz=ud.lastZ===undefined?0:p.z-ud.lastZ;ud.moving=Math.min(1,Math.hypot(dx,dz)*10);ud.lastX=p.x;ud.lastZ=p.z;ud.armL=mesh.children.find(o=>o.name==="arm-left") as THREE.Group|undefined;ud.armR=mesh.children.find(o=>o.name==="arm-right") as THREE.Group|undefined;ud.legL=mesh.children.find(o=>o.name==="leg-left") as THREE.Group|undefined;ud.legR=mesh.children.find(o=>o.name==="leg-right") as THREE.Group|undefined;mesh.position.set(p.x*2,0,p.z*2);mesh.scale.setScalar(1.35);mesh.rotation.y=p.yaw;mesh.visible=p.alive&&!p.escaped;}
  const ids=new Set(current.players.map(p=>p.id));for(const [id,m] of figures)if(!ids.has(id)){scene.remove(m);figures.delete(id);}
  const lootIds=new Set(current.loot.map(d=>d.id));for(const d of current.loot){if(!drops.has(d.id)){const m=new THREE.Mesh(new THREE.BoxGeometry(.55,.55,.55),new THREE.MeshStandardMaterial({color:"#d5b86d"}));m.position.set(d.x*2,.7,d.z*2);m.scale.setScalar(1.7);scene.add(m);drops.set(d.id,m);}}for(const [id,m] of drops)if(!lootIds.has(id)){scene.remove(m);drops.delete(id);}
  const trapIds=new Set(current.traps.map(t=>t.id));for(const t of current.traps){if(!snares.has(t.id)){const m=new THREE.Mesh(new THREE.TorusGeometry(.8,.09,5,16),new THREE.MeshStandardMaterial({color:"#a34f39"}));m.rotation.x=Math.PI/2;m.position.set(t.x*2,.24,t.z*2);m.scale.setScalar(2);scene.add(m);snares.set(t.id,m);}}for(const [id,m] of snares)if(!trapIds.has(id)){scene.remove(m);snares.delete(id);}
