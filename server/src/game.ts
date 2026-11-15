@@ -17,7 +17,9 @@ export class GameEngine {
   private invites=new Map<string,{fromId:string;toId:string}>();
   private friendlyFire=new Map<string,boolean>();
   private collapseSpeeds=new Map<string,number>();
-  private nextRecapAt=new Map<string,number>();\n  private dodgeUntil=new Map<string,number>();\n  private lastDodge=new Map<string,number>();
+  private nextRecapAt=new Map<string,number>();
+  private dodgeUntil=new Map<string,number>();
+  private lastDodge=new Map<string,number>();
   start(room:Room,now=Date.now()) {
     const players:GamePlayer[]=[...room.players.values()].filter(p=>p.connected).map((p,i)=>{
       const a=i*Math.PI*2/Math.max(1,room.players.size);
