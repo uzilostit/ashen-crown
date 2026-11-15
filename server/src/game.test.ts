@@ -80,3 +80,19 @@ test("snare traps injure opponents and splints repair broken legs", () => {
   engine.action(room.code, second.id, { type: "use", slot: 1 }, 900);
   assert.equal(b.brokenLeg, false);
 });
+
+test("eliminated players can spend patron points on a parachute gift", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player: first } = rooms.create("Aster", "pine", "scout");
+  const second = rooms.join(room.code, "Rowan", "salt", "warden").player;
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const living = state.players.find(p => p.id === first.id)!;
+  const spectator = state.players.find(p => p.id === second.id)!;
+  spectator.alive = false;
+  spectator.patronPoints = 1;
+  engine.action(room.code, second.id, { type: "spectator-gift", targetId: first.id, item: "ration" }, 500);
+  assert.equal(spectator.patronPoints, 0);
+  assert.ok(living.inventory.some(x => x.item === "ration"));
+});
