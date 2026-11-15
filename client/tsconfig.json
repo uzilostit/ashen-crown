@@ -1,2 +1,23 @@
-{ "compilerOptions": { "target": "ES2022", "useDefineForClassFields": true, "module": "ESNext", "lib": ["ES2022", "DOM"], "moduleResolution": "Bundler", "strict": true, "noEmit": true, "types": ["vite/client"] }, "include": ["src"] }
-
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "types": [
+      "vite/client"
+    ],
+    "resolveJsonModule": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src"
+  ]
+}
