@@ -14,6 +14,7 @@ let lastInput = 0;
 const keys = new Set<string>();
 const figures = new Map<string, THREE.Group>();
 const drops = new Map<string, THREE.Mesh>();
+const snares = new Map<string, THREE.Mesh>();
 const peers = new Map<string, RTCPeerConnection>();
 const queuedIce = new Map<string, RTCIceCandidateInit[]>();
 const queuedSignals = new Map<string, RTCSignal>();
@@ -64,6 +65,7 @@ function updateScene(){
  for(const p of current.players){let mesh=figures.get(p.id);if(!mesh){mesh=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(.38,.48,1.25,6),new THREE.MeshStandardMaterial({color:color[p.hearth]??"#777"}));body.position.y=.85;const head=new THREE.Mesh(new THREE.SphereGeometry(.3,8,6),new THREE.MeshStandardMaterial({color:"#d6b991"}));head.position.y=1.65;mesh.add(body,head);scene.add(mesh);figures.set(p.id,mesh);}mesh.position.set(p.x,0,p.z);mesh.rotation.y=p.yaw;mesh.visible=p.alive&&!p.escaped;}
  const ids=new Set(current.players.map(p=>p.id));for(const [id,m] of figures)if(!ids.has(id)){scene.remove(m);figures.delete(id);}
  const lootIds=new Set(current.loot.map(d=>d.id));for(const d of current.loot){if(!drops.has(d.id)){const m=new THREE.Mesh(new THREE.BoxGeometry(.55,.55,.55),new THREE.MeshStandardMaterial({color:"#d5b86d"}));m.position.set(d.x,.35,d.z);scene.add(m);drops.set(d.id,m);}}for(const [id,m] of drops)if(!lootIds.has(id)){scene.remove(m);drops.delete(id);}
+ const trapIds=new Set(current.traps.map(t=>t.id));for(const t of current.traps){if(!snares.has(t.id)){const m=new THREE.Mesh(new THREE.TorusGeometry(.8,.09,5,16),new THREE.MeshStandardMaterial({color:"#a34f39"}));m.rotation.x=Math.PI/2;m.position.set(t.x,.12,t.z);scene.add(m);snares.set(t.id,m);}}for(const [id,m] of snares)if(!trapIds.has(id)){scene.remove(m);snares.delete(id);}
  const ring=scene.getObjectByName("safe-ring") as THREE.Mesh;if(ring.geometry)ring.geometry.dispose();ring.geometry=new THREE.TorusGeometry(current.zone.safeRadius,.22,6,128);
 }
 function updateHud(isHost:boolean){
@@ -88,5 +90,5 @@ export function resetGameView(){
  for(const pc of peers.values())pc.close();peers.clear();queuedIce.clear();queuedSignals.clear();
  if(mic){for(const t of mic.getTracks())t.stop();mic=undefined;}
  document.querySelectorAll<HTMLAudioElement>("audio[data-peer]").forEach(a=>{a.pause();a.srcObject=null;a.remove();});
- figures.clear();drops.clear();keys.clear();
+ figures.clear();drops.clear();snares.clear();keys.clear();
 }
