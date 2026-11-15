@@ -19,7 +19,7 @@ export interface GameState {
   helicopter: { x: number; z: number; leavesAt: number } | null;
   winnerId: string | null; message: string;
 }
-export type GameInput = { x: number; z: number; yaw: number; sprint: boolean };
+export type GameInput = { x: number; z: number; yaw: number; sprint: boolean; block: boolean; dodge: boolean };
 export type GameAction =
  | { type: "attack"; targetId: string }
  | { type: "loot"; dropId: string }
