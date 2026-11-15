@@ -42,3 +42,20 @@ test("survival needs drain and the safe boundary inflicts damage", () => {
   assert.ok(p.health < health);
   assert.ok(p.hunger < 100 && p.thirst < 100);
 });
+
+test("alliance invites are visible and accepted by the target", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player: first } = rooms.create("Aster", "pine", "scout");
+  const second = rooms.join(room.code, "Rowan", "salt", "warden").player;
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const a = state.players.find(p => p.id === first.id)!;
+  const b = state.players.find(p => p.id === second.id)!;
+  b.x = a.x + 1; b.z = a.z;
+  engine.action(room.code, first.id, { type: "ally-invite", targetId: second.id }, 500);
+  assert.equal(engine.snapshot(room.code)!.allianceInvites[0].toId, second.id);
+  engine.action(room.code, second.id, { type: "ally-respond", fromId: first.id, accept: true }, 800);
+  assert.ok(a.allianceId && a.allianceId === b.allianceId);
+  assert.equal(engine.snapshot(room.code)!.allianceInvites.length, 0);
+});
