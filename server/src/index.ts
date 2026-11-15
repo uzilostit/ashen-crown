@@ -4,11 +4,11 @@ import { extname, join, normalize } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import type { ClientMessage, ServerMessage } from "@ashen-crown/shared";
 import { RoomError, RoomManager, type Room } from "./rooms.js";
-import { Auth } from "./auth.js";
+import { Auth } from "./auth.js";\nimport { GameEngine } from "./game.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const rooms = new RoomManager();
-const auth = new Auth(); void auth.initialize();
+const auth = new Auth(); void auth.initialize();\nconst game = new GameEngine();
 const clients = new Map<WebSocket, { room: Room; playerId: string }>();
 const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" };
 const cookies = (value = "") => Object.fromEntries(value.split(";").map(v => v.trim().split(/=(.*)/s, 2)).filter(v => v.length === 2));
@@ -16,6 +16,7 @@ const setSession = (res: import("node:http").ServerResponse, id: string) => res.
 const readJson = async (req: import("node:http").IncomingMessage) => JSON.parse(await new Promise<string>((resolve, reject) => { let body = ""; req.on("data", c => body += c); req.on("end", () => resolve(body)); req.on("error", reject); }));
 const send = (ws: WebSocket, message: ServerMessage) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message)); };
 const broadcast = (room: Room) => { const message: ServerMessage = { type: "room-update", room: rooms.view(room) }; for (const [ws, state] of clients) if (state.room === room) send(ws, message); };
+const broadcastGame = (room: Room) => { const state = game.snapshot(room.code); if (!state) return; const message: ServerMessage = { type: "game-state", state }; for (const [ws, client] of clients) if (client.room === room) send(ws, message); };
 const http = createServer((req, res) => {
   if (req.url === "/auth/me") { const account = auth.get(cookies(req.headers.cookie).ac_session); res.writeHead(account ? 200 : 401, { "content-type": "application/json" }); res.end(JSON.stringify(account ? { name: account.name, email: account.email } : {})); return; }
   if (req.url === "/auth/register" || req.url === "/auth/login") { void readJson(req).then(async ({ email, name, password }) => { const session = req.url === "/auth/register" ? await auth.register(email, name, password) : await auth.login(email, password); setSession(res, session.id); res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ name: session.name, email: session.email })); }).catch(error => { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ error: error instanceof Error ? error.message : "Sign-in failed." })); }); return; }
@@ -36,12 +37,18 @@ wss.on("connection", ws => {
       const current = clients.get(ws);
       if (message.type === "create-room") { if (current) throw new RoomError("Already in a room."); const { room, player } = rooms.create(message.name, message.hearth, message.look); clients.set(ws, { room, playerId: player.id }); send(ws, { type: "welcome", playerId: player.id, reconnectToken: player.reconnectToken, room: rooms.view(room) }); broadcast(room); return; }
       if (message.type === "join-room") { if (current) throw new RoomError("Already in a room."); const joined = rooms.join(message.code, message.name, message.hearth, message.look, message.reconnectToken); clients.set(ws, { room: joined.room, playerId: joined.player.id }); send(ws, { type: "welcome", playerId: joined.player.id, reconnectToken: joined.player.reconnectToken, room: rooms.view(joined.room) }); broadcast(joined.room); return; }
-      if (!current) throw new RoomError("Create or join a room first."); rooms.update(current.room, current.playerId, message); broadcast(current.room);
+      if (!current) throw new RoomError("Create or join a room first.");
+      if (message.type === "game-input") { game.input(current.room.code, current.playerId, message.input); return; }
+      if (message.type === "game-action") { game.action(current.room.code, current.playerId, message.action); broadcastGame(current.room); return; }
+      rooms.update(current.room, current.playerId, message); broadcast(current.room);
     } catch (error) { send(ws, { type: "error", message: error instanceof Error ? error.message : "Invalid message." }); }
   });
   ws.on("close", () => { const state = clients.get(ws); clients.delete(ws); if (!state) return; rooms.disconnect(state.room, state.playerId); broadcast(state.room); });
 });
 setInterval(() => rooms.prune(), 10_000).unref();
-setInterval(() => { for (const room of rooms.advance()) broadcast(room); }, 100).unref();
+setInterval(() => {
+  for (const room of rooms.advance()) { if (room.phase === "match") game.start(room); broadcast(room); }
+  for (const room of rooms.rooms.values()) if (room.phase === "match") { game.tick(room); broadcastGame(room); }
+}, 50).unref();
 http.listen(port, () => console.log(`ASHEN CROWN server at http://localhost:${port}`));
 
