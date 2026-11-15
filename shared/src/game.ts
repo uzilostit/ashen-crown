@@ -28,4 +28,5 @@ export type GameAction =
  | { type: "ally-invite"; targetId: string }
  | { type: "ally-respond"; fromId: string; accept: boolean }
  | { type: "leave-alliance" }
- | { type: "board-helicopter" }\n | { type: "emote"; text: string };
+ | { type: "board-helicopter" }
+ | { type: "emote"; text: string };
