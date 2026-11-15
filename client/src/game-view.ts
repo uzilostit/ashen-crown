@@ -11,7 +11,7 @@ let sendMessage: Send = () => {};
 let root: HTMLElement | undefined;
 let inputTimer = 0;
 let lastInput = 0;
-const keys = new Set<string>();
+const keys = new Set<string>();\nlet stickX=0,stickY=0,cameraYaw=0,cameraPitch=0.28,cameraDistance=13,draggingCamera=false,lastPointerX=0,lastPointerY=0;
 const figures = new Map<string, THREE.Group>();
 const drops = new Map<string, THREE.Mesh>();
 const snares = new Map<string, THREE.Mesh>();
@@ -31,43 +31,70 @@ export function renderGame(host:HTMLElement,id:string,state:GameState,send:Send,
 }
 function mount(isHost:boolean){
   if(!root)return;
-  root.innerHTML=`<div id="game" class="game-screen"><div class="game-top"><div><span class="game-kicker">THE REGENT COUNCIL PRESENTS</span><strong>ASHEN CROWN</strong></div><div id="game-message">Quillwood is watching.</div><canvas id="minimap" width="160" height="160" aria-label="Arena minimap"></canvas></div><div class="game-bottom"><div class="stat-panel" id="stats"></div><div class="inventory-panel" id="inventory"></div><div class="game-actions"><button id="attack">STRIKE</button><button id="loot">LOOT</button><button id="flare">FLARE</button><button id="ally">ALLY</button><button id="voice">VOICE</button><button id="ping">PING</button><button id="gift">GIFT</button></div></div><div class="touch-pad"><button data-key="w">▲</button><div><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div><button data-key="shift" class="sprint">RUN</button><button data-key="q" class="sprint">BLOCK</button><button data-key=" " class="sprint">DODGE</button></div><div id="game-result" class="game-result" hidden></div></div>`;
-  scene=new THREE.Scene();scene.background=new THREE.Color("#a9a08a");scene.fog=new THREE.Fog("#a9a08a",45,105);
-  camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,420);
-  renderer=new THREE.WebGLRenderer({antialias:innerWidth>700});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.domElement.className="game-canvas";document.querySelector("#game")!.prepend(renderer.domElement);
-  scene.add(new THREE.HemisphereLight(0xf4e8ce,0x354033,2.1));const sun=new THREE.DirectionalLight(0xffe0ac,2.2);sun.position.set(-20,35,12);sun.castShadow=true;scene.add(sun);
-  const floor=new THREE.Mesh(new THREE.CircleGeometry(92,128),new THREE.MeshStandardMaterial({color:"#59624a",roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=-.12;floor.receiveShadow=true;scene.add(floor);
-  const biomes=["#71836a","#a85f43","#385f4a","#c6b58a","#8ca9b4","#8d665d"];
-  for(let i=0;i<6;i++){const start=i*Math.PI/3-Math.PI/6;const shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(Math.cos(start)*90,Math.sin(start)*90);for(let j=1;j<=20;j++){const a=start+Math.PI/3*j/20;shape.lineTo(Math.cos(a)*90,Math.sin(a)*90);}shape.lineTo(0,0);const tile=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:biomes[i],roughness:1,side:THREE.DoubleSide,transparent:true,opacity:.82}));tile.rotation.x=-Math.PI/2;tile.position.y=-.04;tile.receiveShadow=true;scene.add(tile);}
-  // Ancient radial causeways, broken boundary walls, and six biome landmarks give the arena a readable sense of scale.
+  root.innerHTML=`<div id="game" class="game-screen"><div class="game-top"><div><span class="game-kicker">THE REGENT COUNCIL PRESENTS</span><strong>ASHEN CROWN</strong></div><div id="game-message">Quillwood is watching.</div><canvas id="minimap" width="160" height="160" aria-label="Arena minimap"></canvas></div><div class="game-bottom"><div class="stat-panel" id="stats"></div><div class="inventory-panel" id="inventory"></div><div class="game-actions"><button id="attack">STRIKE</button><button id="loot">LOOT</button><button id="flare">FLARE</button><button id="ally">ALLY</button><button id="voice">VOICE</button><button id="ping">PING</button><button id="gift">GIFT</button></div></div><div class="mobile-controls"><div class="move-zone"><div id="stick-base"><div id="stick-knob"></div></div><span>MOVE</span></div><div class="action-cluster"><button id="mobile-dodge" class="round-action">DODGE</button><button id="mobile-attack" class="round-action primary-action">⚔</button><button id="mobile-block" class="round-action">BLOCK</button><button id="mobile-run" class="round-action">RUN</button></div><div class="camera-hint">DRAG TO LOOK</div></div><div id="game-result" class="game-result" hidden></div></div>`;
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color("#a9b5aa");scene.fog=new THREE.FogExp2("#a9b5aa",.0028);
+  camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,520);
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.65));renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+  renderer.domElement.className="game-canvas";document.querySelector("#game")!.prepend(renderer.domElement);
+  scene.add(new THREE.HemisphereLight(0xdce8e2,0x354438,1.65));
+  const sun=new THREE.DirectionalLight(0xffe5bd,3.1);sun.position.set(-48,72,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-110;sun.shadow.camera.right=110;sun.shadow.camera.top=110;sun.shadow.camera.bottom=-110;sun.shadow.bias=-.00025;scene.add(sun);
+  const fill=new THREE.DirectionalLight(0x9bb9d2,.8);fill.position.set(45,24,-48);scene.add(fill);
+  const mat=(c:string,r=1,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+  const hex=new THREE.Mesh(new THREE.CylinderGeometry(92,96,3,6),mat("#4e5746"));hex.position.y=-1.55;hex.rotation.y=Math.PI/6;hex.receiveShadow=true;scene.add(hex);
+  const soil=new THREE.Mesh(new THREE.CircleGeometry(90,128),mat("#6f7658"));soil.rotation.x=-Math.PI/2;soil.position.y=-.02;soil.receiveShadow=true;scene.add(soil);
+  const biome=["#718a68","#9c6549","#345d4b","#bcae85","#91acb7","#986c66"];
+  const biomeMats=biome.map(c=>mat(c));
   for(let i=0;i<6;i++){
-    const a=i*Math.PI/3;
-    const road=new THREE.Mesh(new THREE.BoxGeometry(5.5,.12,62),new THREE.MeshStandardMaterial({color:"#82765a",roughness:1}));
-    road.position.set(Math.cos(a)*39,.015,Math.sin(a)*39);road.rotation.y=-a;scene!.add(road);
-    const plinth=new THREE.Mesh(new THREE.CylinderGeometry(3.1,4.2,2.4,7),new THREE.MeshStandardMaterial({color:"#625c4a",roughness:1}));
-    plinth.position.set(Math.cos(a)*76,1.2,Math.sin(a)*76);scene!.add(plinth);
-    const shard=new THREE.Mesh(new THREE.DodecahedronGeometry(3.2,0),new THREE.MeshStandardMaterial({color:["#829077","#b16a4b","#466d58","#d4c49b","#9cbac5","#a87970"][i],roughness:1,flatShading:true}));
-    shard.scale.set(.7,1.8,.7);shard.position.set(Math.cos(a)*76,4.2,Math.sin(a)*76);scene!.add(shard);
-    for(let j=0;j<5;j++){const x=Math.cos(a)* (44+j*5),z=Math.sin(a)*(44+j*5);const stone=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.1,1.8),new THREE.MeshStandardMaterial({color:"#716b58",roughness:1}));stone.position.set(x,.45,z);stone.rotation.y=a+j*.7;scene!.add(stone);}
+    const a0=i*Math.PI/3-Math.PI/6,shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(Math.cos(a0)*89,Math.sin(a0)*89);
+    for(let j=1;j<=48;j++){const a=a0+Math.PI/3*j/48;shape.lineTo(Math.cos(a)*89,Math.sin(a)*89);}shape.lineTo(0,0);
+    const sector=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:biome[i],roughness:.96,transparent:true,opacity:.34,side:THREE.DoubleSide}));sector.rotation.x=-Math.PI/2;sector.position.y=.025;sector.receiveShadow=true;scene.add(sector);
+    const road=new THREE.Mesh(new THREE.BoxGeometry(6,.18,70),mat("#b6a27a"));road.position.set(Math.cos(i*Math.PI/3)*36,.12,Math.sin(i*Math.PI/3)*36);road.rotation.y=-i*Math.PI/3;road.receiveShadow=true;scene.add(road);
+    // A landmark, shrine, and distinctive foliage anchor each region.
+    const shrine=new THREE.Group();const plinth=new THREE.Mesh(new THREE.CylinderGeometry(3.4,4.3,1.8,8),mat("#625f50"));plinth.position.y=.9;plinth.castShadow=true;shrine.add(plinth);
+    const obelisk=new THREE.Mesh(new THREE.OctahedronGeometry(2.2,0),new THREE.MeshStandardMaterial({color:biome[i],roughness:.35,metalness:.18,emissive:biome[i],emissiveIntensity:.08}));obelisk.scale.set(.75,1.7,.75);obelisk.position.y=3.6;obelisk.castShadow=true;shrine.add(obelisk);
+    shrine.position.set(Math.cos(i*Math.PI/3)*76,0,Math.sin(i*Math.PI/3)*76);scene.add(shrine);
+    for(let j=0;j<22;j++){
+      const a=i*Math.PI/3+(j-10.5)*.075,r=43+(j%6)*5.5,x=Math.cos(a)*r,z=Math.sin(a)*r;
+      const tree=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.42,2.6,7),mat("#594838"));trunk.position.y=1.3;trunk.castShadow=true;tree.add(trunk);
+      if(i===2||i===5){
+        for(let k=0;k<3;k++){const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.7-k*.22,1),mat(i===2?(k%2?"#416d50":"#315a43"):(k%2?"#9a7868":"#765a56")));crown.position.set((k-1)*.48,2.8+k*.65,0);crown.scale.set(1,1.1,1);crown.castShadow=true;tree.add(crown);}
+      }else{
+        const crown=new THREE.Mesh(new THREE.ConeGeometry(i===4?2.1:1.8,4.8,7),mat(i===0?"#82996a":i===1?"#b06c4d":i===3?"#c9b98e":"#91aeb8"));crown.position.y=3.8;crown.castShadow=true;tree.add(crown);
+      }
+      tree.position.set(x,0,z);tree.rotation.y=j*1.7;tree.scale.setScalar(.8+(j%4)*.12);scene.add(tree);
+      if(j%3===0){const boulder=new THREE.Mesh(new THREE.DodecahedronGeometry(1.1+(j%3)*.35,0),mat("#686b5d"));boulder.position.set(x+2,.5,z-2);boulder.scale.y=.7;boulder.rotation.set(j,j*.7,0);boulder.castShadow=true;scene.add(boulder);}
+    }
   }
-  // Scatter deterministic rock clusters and scrub so the terrain is not a set of six flat wedges.
-  for(let i=0;i<180;i++){
-    const angle=i*2.399963, radius=17+(i*37%6900)/100;
-    if(radius>87)continue;
-    const x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
-    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.45+(i%5)*.16,0),new THREE.MeshStandardMaterial({color:i%3===0?"#77715e":"#555b49",roughness:1,flatShading:true}));
-    rock.position.set(x,.25,z);rock.rotation.set(i*.3,i*.7,i*.2);rock.scale.y=.55;scene!.add(rock);
-    if(i%3===0){const shrub=new THREE.Mesh(new THREE.IcosahedronGeometry(.65+(i%4)*.12,0),new THREE.MeshStandardMaterial({color:i%2?"#465c40":"#68734b",roughness:1,flatShading:true}));shrub.position.set(x+1,.45,z-.8);shrub.scale.y=.65;scene!.add(shrub);}
+  // Layered central citadel: steps, paving, banners and a warm beacon.
+  const camp=new THREE.Group();const base=new THREE.Mesh(new THREE.CylinderGeometry(13,15,2.2,8),mat("#b6a078"));base.position.y=.8;base.castShadow=true;base.receiveShadow=true;camp.add(base);
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(8.5,9.5,.7,8),mat("#d3bd8b"));inner.position.y=2.2;camp.add(inner);
+  const fire=new THREE.Mesh(new THREE.ConeGeometry(1.35,4.8,9),new THREE.MeshStandardMaterial({color:"#ff9b48",emissive:"#d95b1d",emissiveIntensity:1.4,roughness:.35}));fire.position.y=4.7;camp.add(fire);
+  const flameLight=new THREE.PointLight(0xff9a51,28,35);flameLight.position.y=5;camp.add(flameLight);camp.position.set(0,0,0);scene.add(camp);
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;const pillar=new THREE.Mesh(new THREE.BoxGeometry(.8,4.4,.8),mat("#706b58"));pillar.position.set(Math.cos(a)*11,2.2,Math.sin(a)*11);pillar.castShadow=true;scene.add(pillar);}
+  const water=new THREE.Mesh(new THREE.TorusGeometry(98,5,12,220),new THREE.MeshStandardMaterial({color:"#355d66",roughness:.28,metalness:.18,transparent:true,opacity:.92}));water.rotation.x=Math.PI/2;water.position.y=-.9;scene.add(water);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(88,.24,10,220),new THREE.MeshBasicMaterial({color:"#f3d99a"}));ring.rotation.x=Math.PI/2;ring.position.y=.28;ring.name="safe-ring";scene.add(ring);
+  // Terrain dressing: fern clusters, fallen logs, and stone paths create foreground depth.
+  for(let i=0;i<140;i++){const a=i*2.399963,r=19+(i*53%6700)/100;if(r>86)continue;const x=Math.cos(a)*r,z=Math.sin(a)*r;
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.35+(i%5)*.18,0),mat(i%4===0?"#8c8068":"#555f50"));rock.position.set(x,.22,z);rock.rotation.set(i*.4,i*.7,i*.2);rock.scale.y=.55;rock.castShadow=true;scene.add(rock);
+    if(i%4===0){const fern=new THREE.Group();for(let k=0;k<5;k++){const leaf=new THREE.Mesh(new THREE.ConeGeometry(.16,1.45,5),mat("#4e754c"));leaf.position.set(Math.cos(k*1.256)*.45,.65,Math.sin(k*1.256)*.45);leaf.rotation.z=-.45;fern.add(leaf);}fern.position.set(x+1,.1,z-.8);scene.add(fern);}
   }
-  // A shallow dark-water moat and a broken outer ring frame the playable island.
-  const moat=new THREE.Mesh(new THREE.TorusGeometry(96,5,8,192),new THREE.MeshStandardMaterial({color:"#34494a",roughness:.35,metalness:.12,transparent:true,opacity:.9}));
-  moat.rotation.x=Math.PI/2;moat.position.y=-.45;scene!.add(moat);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(88,.32,8,192),new THREE.MeshBasicMaterial({color:"#e8d28a"}));ring.rotation.x=Math.PI/2;ring.position.y=.2;ring.name="safe-ring";scene.add(ring);
-  const camp=new THREE.Mesh(new THREE.CylinderGeometry(11,12,2,8),new THREE.MeshStandardMaterial({color:"#b99b61"}));camp.position.y=.8;camp.rotation.y=Math.PI/6;scene.add(camp);
-  const fire=new THREE.Mesh(new THREE.ConeGeometry(1.2,4.4,9),new THREE.MeshStandardMaterial({color:"#e78b3d",emissive:"#8d3d12",emissiveIntensity:1}));fire.position.y=3.8;scene.add(fire);
-  for(let i=0;i<6;i++){const a=i*Math.PI/3;for(let j=0;j<18;j++){const r=58+(j%5)*5;const tree=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.28,1.8,5),new THREE.MeshStandardMaterial({color:"#594735"}));trunk.position.y=.9;const crown=new THREE.Mesh(new THREE.ConeGeometry(1.1,3,5),new THREE.MeshStandardMaterial({color:Object.values(color)[i]}));crown.position.y=2.8;tree.add(trunk,crown);tree.position.set(Math.cos(a+(j-8.5)*.045)*r,0,Math.sin(a+(j-4)*.09)*r);scene!.add(tree);}}
   const resize=()=>{if(!camera||!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);};window.addEventListener("resize",resize);
   window.addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift","q"," "].includes(k)){keys.add(k);e.preventDefault();}});
+  renderer.domElement.addEventListener("pointerdown",e=>{draggingCamera=true;lastPointerX=e.clientX;lastPointerY=e.clientY;renderer?.domElement.setPointerCapture(e.pointerId);});
+  renderer.domElement.addEventListener("pointermove",e=>{if(!draggingCamera)return;cameraYaw-=(e.clientX-lastPointerX)*.006;cameraPitch=Math.max(.12,Math.min(.62,cameraPitch+(e.clientY-lastPointerY)*.003));lastPointerX=e.clientX;lastPointerY=e.clientY;});
+  renderer.domElement.addEventListener("pointerup",()=>draggingCamera=false);renderer.domElement.addEventListener("pointercancel",()=>draggingCamera=false);
+  const stick=document.querySelector<HTMLElement>("#stick-base"),knob=document.querySelector<HTMLElement>("#stick-knob");
+  stick?.addEventListener("pointerdown",e=>{e.preventDefault();stick.setPointerCapture(e.pointerId);moveStick(e);});
+  stick?.addEventListener("pointermove",e=>{if(e.buttons)moveStick(e);});
+  for(const ev of ["pointerup","pointercancel","lostpointercapture"])stick?.addEventListener(ev,()=>{stickX=0;stickY=0;if(knob)knob.style.transform="translate(0,0)";});
+  function moveStick(e:PointerEvent){const r=stick!.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,len/42);stickX=dx/len*scale;stickY=dy/len*scale;if(knob)knob.style.transform=`translate(${stickX*42}px,${stickY*42}px)`;}
+  document.querySelector("#mobile-attack")?.addEventListener("click",attack);document.querySelector("#mobile-dodge")?.addEventListener("pointerdown",()=>keys.add(" "));document.querySelector("#mobile-dodge")?.addEventListener("pointerup",()=>keys.delete(" "));
+  document.querySelector("#mobile-block")?.addEventListener("pointerdown",()=>keys.add("q"));document.querySelector("#mobile-block")?.addEventListener("pointerup",()=>keys.delete("q"));
+  document.querySelector("#mobile-run")?.addEventListener("pointerdown",()=>keys.add("shift"));document.querySelector("#mobile-run")?.addEventListener("pointerup",()=>keys.delete("shift"));
   window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
   document.querySelectorAll<HTMLButtonElement>("[data-key]").forEach(b=>{const k=b.dataset.key!;b.addEventListener("pointerdown",e=>{e.preventDefault();keys.add(k);});for(const ev of ["pointerup","pointerleave","pointercancel"])b.addEventListener(ev,()=>keys.delete(k));});
   document.querySelector("#attack")?.addEventListener("click",attack);
@@ -82,7 +109,7 @@ function mount(isHost:boolean){
   if(!inputTimer)inputTimer=window.setInterval(sendInput,50);
   renderer.setAnimationLoop(()=>{if(!renderer||!scene||!camera||!current)return;const me=current.players.find(p=>p.id===selfId);const target=me?.alive?me:current.players.filter(p=>p.alive&&!p.escaped).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(target){camera.position.lerp(new THREE.Vector3(target.x*2,18,target.z*2+23),.12);camera.lookAt(target.x*2,1.1,target.z*2);}renderer.render(scene,camera);});
 }
-function sendInput(){if(!current)return;const x=(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0);const z=(keys.has("s")||keys.has("arrowdown")?1:0)-(keys.has("w")||keys.has("arrowup")?1:0);const now=performance.now();if(now-lastInput<45)return;lastInput=now;sendMessage({type:"game-input",input:{x,z,yaw:Math.atan2(x,z),sprint:keys.has("shift"),block:keys.has("q"),dodge:keys.has(" ")}});}
+function sendInput(){if(!current)return;const x=stickX+(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0),z=stickY+(keys.has("s")||keys.has("arrowdown")?1:0)-(keys.has("w")||keys.has("arrowup")?1:0);const forward=Math.cos(cameraYaw),right=Math.sin(cameraYaw),worldX=x*forward+z*right,worldZ=z*forward-x*right;const now=performance.now();if(now-lastInput<45)return;lastInput=now;sendMessage({type:"game-input",input:{x:worldX,z:worldZ,yaw:Math.atan2(worldX,worldZ),sprint:keys.has("shift"),block:keys.has("q"),dodge:keys.has(" ")}});}
 function attack(){const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive&&p.id!==selfId).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(target)sendMessage({type:"game-action",action:{type:"attack",targetId:target.id}});}
 function loot(){const me=current?.players.find(p=>p.id===selfId);const d=current?.loot.slice().sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(d)sendMessage({type:"game-action",action:{type:"loot",dropId:d.id}});}
 function invite(){const me=current?.players.find(p=>p.id===selfId);const target=current?.players.filter(p=>p.alive&&p.id!==selfId).sort((a,b)=>dist(a,me??a)-dist(b,me??b))[0];if(target)sendMessage({type:"game-action",action:{type:"ally-invite",targetId:target.id}});}
