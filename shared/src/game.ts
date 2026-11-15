@@ -3,7 +3,7 @@ import type { Hearth } from "./index.js";
 export type ItemId = "dagger" | "spear" | "bow" | "arrows" | "axe" | "crossbow" | "bandage" | "healthKit" | "waterBottle" | "ration" | "backpack" | "flareGun" | "torch" | "snare";
 export interface InventoryStack { item: ItemId; count: number }
 export interface GamePlayer {
-  id: string; name: string; hearth: Hearth; look: string;
+  id: string; name: string; hearth: Hearth; look: string; connected: boolean;
   x: number; z: number; yaw: number;
   health: number; hunger: number; thirst: number; stamina: number;
   alive: boolean; escaped: boolean; inventory: InventoryStack[];
