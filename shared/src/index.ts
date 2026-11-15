@@ -1,6 +1,6 @@
 export const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const MAX_ROOM_PLAYERS = 15;
-export const MIN_MATCH_PLAYERS = 5;
+export const MIN_MATCH_PLAYERS = 2;
 
 export type Hearth = "marsh" | "cinder" | "pine" | "salt" | "frost" | "orchard";
 export const HEARTHS: Hearth[] = ["marsh", "cinder", "pine", "salt", "frost", "orchard"];
