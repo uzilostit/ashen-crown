@@ -27,4 +27,4 @@ export type GameAction =
  | { type: "flare" }
  | { type: "ally-invite"; targetId: string }
  | { type: "ally-respond"; fromId: string; accept: boolean }
- | { type: "leave-alliance" };
+ | { type: "leave-alliance" }\n | { type: "board-helicopter" };
