@@ -73,3 +73,32 @@ main{padding:6vh 16px}.game-top{padding:12px 14px 34px}.game-top strong{font-siz
   .action-cluster{bottom:160px}
   .camera-hint{bottom:320px}
 }
+
+
+/* Final touch-device fit pass: respect notches, browser chrome and short landscape screens. */
+.game-screen{height:100vh;height:100dvh;min-height:0;overscroll-behavior:none}
+.game-canvas{touch-action:none}
+@media (pointer:coarse){
+  html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+  .game-screen{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .game-top{padding-top:max(8px,env(safe-area-inset-top))}
+  .move-zone,#stick-base,.action-cluster,.round-action{touch-action:none;user-select:none;-webkit-user-select:none}
+  .round-action{ -webkit-tap-highlight-color:transparent }
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:430px){
+  .game-top{padding-top:5px;padding-bottom:20px}
+  .game-top strong{font-size:1.08rem}
+  .game-kicker{font-size:.42rem}
+  #minimap{top:52px;width:68px;height:68px}
+  .move-zone{left:10px;bottom:8px}
+  #stick-base{width:92px;height:92px}
+  #stick-knob{width:40px;height:40px}
+  .action-cluster{right:10px;bottom:8px;transform:scale(.78);transform-origin:bottom right}
+  .game-bottom{left:104px;right:104px;bottom:5px;gap:2px}
+  .stat-panel{font-size:.44rem;gap:2px}
+  .stat-panel span{padding:3px 4px}
+  .inventory-panel{max-height:25px}
+  .inventory-panel button{padding:3px 5px;font-size:.44rem}
+  .game-actions{gap:2px}
+  .game-actions button{padding:4px 5px;font-size:.42rem}
+}
