@@ -5,7 +5,7 @@ export interface InventoryStack { item: ItemId; count: number }
 export interface GamePlayer {
   id: string; name: string; hearth: Hearth; look: string; connected: boolean;
   x: number; z: number; yaw: number;
-  health: number; hunger: number; thirst: number; stamina: number;
+  patronPoints: number; health: number; hunger: number; thirst: number; stamina: number;
   alive: boolean; escaped: boolean; inventory: InventoryStack[];
   allianceId: string | null; bleeding: number; brokenLeg: boolean;
 }
@@ -30,4 +30,4 @@ export type GameAction =
  | { type: "ally-respond"; fromId: string; accept: boolean }
  | { type: "leave-alliance" }
  | { type: "board-helicopter" }
- | { type: "emote"; text: string };
+ | { type: "emote"; text: string }\n | { type: "spectator-gift"; targetId: string; item: "ration" | "waterBottle" | "bandage" }\n | { type: "spectator-chat"; text: string };
