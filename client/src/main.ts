@@ -85,7 +85,7 @@ function renderArena() {
         crown.position.y = 3;
         tree.add(trunk, crown);
         tree.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
-        tree.traverse(o => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+        tree.traverse(o => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
         scene.add(tree);
       }
     }
