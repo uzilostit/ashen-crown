@@ -40,6 +40,7 @@ wss.on("connection", ws => {
       if (message.type === "create-room") { if (current) throw new RoomError("Already in a room."); const { room, player } = rooms.create(message.name, message.hearth, message.look); clients.set(ws, { room, playerId: player.id }); send(ws, { type: "welcome", playerId: player.id, reconnectToken: player.reconnectToken, room: rooms.view(room) }); broadcast(room); return; }
       if (message.type === "join-room") { if (current) throw new RoomError("Already in a room."); const joined = rooms.join(message.code, message.name, message.hearth, message.look, message.reconnectToken); clients.set(ws, { room: joined.room, playerId: joined.player.id }); send(ws, { type: "welcome", playerId: joined.player.id, reconnectToken: joined.player.reconnectToken, room: rooms.view(joined.room) }); broadcast(joined.room); return; }
       if (!current) throw new RoomError("Create or join a room first.");
+      if (message.type === "voice-signal") { const target=[...clients].find(([,c])=>c.room===current.room&&c.playerId===message.targetId); if(target) send(target[0],{type:"voice-signal",fromId:current.playerId,signal:message.signal}); return; }
       if (message.type === "game-input") { game.input(current.room.code, current.playerId, message.input); return; }
       if (message.type === "game-action") { game.action(current.room.code, current.playerId, message.action); broadcastGame(current.room); return; }
       rooms.update(current.room, current.playerId, message); broadcast(current.room);
