@@ -30,4 +30,6 @@ export type GameAction =
  | { type: "ally-respond"; fromId: string; accept: boolean }
  | { type: "leave-alliance" }
  | { type: "board-helicopter" }
- | { type: "emote"; text: string }\n | { type: "spectator-gift"; targetId: string; item: "ration" | "waterBottle" | "bandage" }\n | { type: "spectator-chat"; text: string };
+ | { type: "emote"; text: string }
+ | { type: "spectator-gift"; targetId: string; item: "ration" | "waterBottle" | "bandage" }
+ | { type: "spectator-chat"; text: string };
