@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { ClientMessage, GameState, RTCSignal } from "@ashen-crown/shared";
+import { WORLD_OBSTACLES, type ClientMessage, type GameState, type RTCSignal } from "@ashen-crown/shared";
 
 type Send = (message: ClientMessage) => void;
 let renderer: THREE.WebGLRenderer | undefined;
@@ -45,14 +45,18 @@ function mount(isHost:boolean){
   const sun=new THREE.DirectionalLight(0xffe5bd,3.1);sun.position.set(-48,72,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-110;sun.shadow.camera.right=110;sun.shadow.camera.top=110;sun.shadow.camera.bottom=-110;sun.shadow.bias=-.00025;scene.add(sun);
   const fill=new THREE.DirectionalLight(0x9bb9d2,.8);fill.position.set(45,24,-48);scene.add(fill);
   const mat=(c:string,r=1,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
-  const hex=new THREE.Mesh(new THREE.CylinderGeometry(92,96,3,6),mat("#4e5746"));hex.position.y=-1.55;hex.rotation.y=Math.PI/6;hex.receiveShadow=true;scene.add(hex);
-  const soil=new THREE.Mesh(new THREE.CircleGeometry(90,128),mat("#6f7658"));soil.rotation.x=-Math.PI/2;soil.position.y=-.02;soil.receiveShadow=true;scene.add(soil);
-  const biome=["#718a68","#9c6549","#345d4b","#bcae85","#91acb7","#986c66"];
+  const hex=new THREE.Mesh(new THREE.CylinderGeometry(94,100,5,6),mat("#202a25",.96));hex.position.y=-2.5;hex.rotation.y=Math.PI/6;hex.receiveShadow=true;scene.add(hex);
+  const biome=["#344f3e","#76513f","#1e4439","#8a8060","#3f5e70","#60464b"];
+  const terrain=new THREE.PlaneGeometry(188,188,120,120);const positions=terrain.attributes.position as THREE.BufferAttribute;const colors:number[]=[];
+  const palette=biome.map(c=>new THREE.Color(c));
+  for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=-positions.getY(i),r=Math.hypot(x,z),a=(Math.atan2(z,x)+Math.PI*2)%(Math.PI*2),sector=Math.floor(a/(Math.PI/3))%6,n=Math.sin(x*.13+z*.07)*.55+Math.cos(z*.19-x*.09)*.35;
+    const height=(Math.sin(x*.075)*Math.cos(z*.09)*1.2+Math.sin((x+z)*.16)*.35)*(r<14?.18:1);positions.setZ(i,height);
+    const base=palette[sector].clone(),next=palette[(sector+1)%6],blend=(a%(Math.PI/3))/(Math.PI/3),edge=Math.min(1,Math.max(0,(r-10)/20));base.lerp(next,blend*.35).multiplyScalar(.83+n*.055+edge*.08);colors.push(base.r,base.g,base.b);
+  }
+  terrain.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));terrain.computeVertexNormals();
+  const ground=new THREE.Mesh(terrain,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0}));ground.rotation.x=-Math.PI/2;ground.position.y=-.05;ground.receiveShadow=true;scene.add(ground);
   const biomeMats=biome.map(c=>mat(c));
   for(let i=0;i<6;i++){
-    const a0=i*Math.PI/3-Math.PI/6,shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(Math.cos(a0)*89,Math.sin(a0)*89);
-    for(let j=1;j<=48;j++){const a=a0+Math.PI/3*j/48;shape.lineTo(Math.cos(a)*89,Math.sin(a)*89);}shape.lineTo(0,0);
-    const sector=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshStandardMaterial({color:biome[i],roughness:.96,transparent:true,opacity:.34,side:THREE.DoubleSide}));sector.rotation.x=-Math.PI/2;sector.position.y=.025;sector.receiveShadow=true;scene.add(sector);
     const road=new THREE.Mesh(new THREE.BoxGeometry(6,.18,70),mat("#b6a27a"));road.position.set(Math.cos(i*Math.PI/3)*36,.12,Math.sin(i*Math.PI/3)*36);road.rotation.y=-i*Math.PI/3;road.receiveShadow=true;scene.add(road);
     // A landmark, shrine, and distinctive foliage anchor each region.
     const shrine=new THREE.Group();const plinth=new THREE.Mesh(new THREE.CylinderGeometry(3.4,4.3,1.8,8),mat("#625f50"));plinth.position.y=.9;plinth.castShadow=true;shrine.add(plinth);
@@ -70,6 +74,8 @@ function mount(isHost:boolean){
       if(j%3===0){const boulder=new THREE.Mesh(new THREE.DodecahedronGeometry(1.1+(j%3)*.35,0),mat("#686b5d"));boulder.position.set(x+2,.5,z-2);boulder.scale.y=.7;boulder.rotation.set(j,j*.7,0);boulder.castShadow=true;scene.add(boulder);}
     }
   }
+  // Solid visual props use the same deterministic layout as server-side body collision.
+  for(const obstacle of WORLD_OBSTACLES){const prop=new THREE.Group();if(obstacle.kind==="tree"){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.42,.62,4.8,8),mat("#46382e"));trunk.position.y=2.4;trunk.castShadow=true;const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(2.65,1),mat("#244b38"));crown.position.y=5.1;crown.scale.set(1,1.15,1);crown.castShadow=true;const crown2=new THREE.Mesh(new THREE.IcosahedronGeometry(1.9,1),mat("#315d42"));crown2.position.set(.8,6.1,.3);crown2.castShadow=true;prop.add(trunk,crown,crown2);}else if(obstacle.kind==="rock"){const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(2,1),mat("#505b54"));rock.scale.set(1.15,.8,.9);rock.position.y=1;rock.castShadow=true;prop.add(rock);}else{const stump=new THREE.Mesh(new THREE.CylinderGeometry(.8,1.05,1.4,8),mat("#5c4635"));stump.position.y=.7;stump.castShadow=true;prop.add(stump);}prop.position.set(obstacle.x*2,0,obstacle.z*2);scene.add(prop);}
   // Layered central citadel: steps, paving, banners and a warm beacon.
   const camp=new THREE.Group();const base=new THREE.Mesh(new THREE.CylinderGeometry(13,15,2.2,8),mat("#b6a078"));base.position.y=.8;base.castShadow=true;base.receiveShadow=true;camp.add(base);
   const inner=new THREE.Mesh(new THREE.CylinderGeometry(8.5,9.5,.7,8),mat("#d3bd8b"));inner.position.y=2.2;camp.add(inner);
