@@ -30,14 +30,15 @@ export interface RoomView {
   minPlayers: number;
 }
 import type { GameAction, GameInput, GameState } from "./game.js";
-export type { GamePlayer, InventoryStack, ItemId, LootDrop, Trap, GameState, GameInput, GameAction } from "./game.js";
-export { WORLD_OBSTACLES } from "./game.js";
+export type { GamePlayer, InventoryStack, ItemId, LootDrop, Trap, GameState, GameInput, GameAction, FeedEntry } from "./game.js";
+export { WORLD_OBSTACLES, biomeAt } from "./game.js";
 export type { WorldObstacle } from "./game.js";
 export interface RTCSignal { type: "offer" | "answer" | "candidate"; sdp?: string; candidate?: string; sdpMid?: string | null; sdpMLineIndex?: number | null; }
 export type ClientMessage =
   | { type: "create-room"; name: string; hearth: Hearth; look: FigureLook }
   | { type: "join-room"; code: string; name: string; hearth: Hearth; look: FigureLook; reconnectToken?: string }
   | { type: "set-ready"; ready: boolean }
+  | { type: "set-profile"; name: string; hearth: Hearth; look: FigureLook }
   | { type: "set-settings"; settings: RoomSettings }
   | { type: "start-match" }
   | { type: "kick-player"; playerId: string }

@@ -96,7 +96,7 @@ export const PALETTE: Record<Biome, { low: string; high: string; edge: string; a
   marsh: { low: "#5d7a63", high: "#8aa27a", edge: "#e9e4cd", accent: "#4f9a98" },
   cinder: { low: "#4a3b38", high: "#9b6246", edge: "#e6d6c2", accent: "#ff8a3d" },
   pine: { low: "#2f5a43", high: "#5e8f5d", edge: "#e3e5d0", accent: "#9ccf88" },
-  salt: { low: "#d6c9a6", high: "#f1e8cf", edge: "#faf3df", accent: "#f7f1e1" },
+  salt: { low: "#c7b58a", high: "#e8dcb8", edge: "#faf3df", accent: "#f7f1e1" },
   frost: { low: "#8fb1c6", high: "#e1eff6", edge: "#f1f6f7", accent: "#bfe4f5" },
   orchard: { low: "#a9735c", high: "#d29a7d", edge: "#efe0cc", accent: "#e8828d" },
 };
@@ -140,7 +140,7 @@ export function heightField(x: number, z: number) {
   let h = sum / Math.max(1e-4, wsum);
   const r = Math.hypot(x, z);
   h = lerp(h, 0.34, smoothstep(BASE_R + 18, BASE_R + 3, r));
-  h = lerp(h, 0.3, 1 - smoothstep(0, 3.4, Math.abs(r - SPAWN_R)));
+  h = lerp(h, 0.44, 1 - smoothstep(0, 5, Math.abs(r - SPAWN_R)));
   return clamp(h, 0.03, 0.98);
 }
 

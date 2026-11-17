@@ -129,3 +129,98 @@ test("flare escape only unlocks after the five zone collapses", () => {
   engine.action(room.code, player.id, { type: "flare" }, 800);
   assert.equal(state.phase, "flare");
 });
+
+function twoPlayers() {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player } = rooms.create("Aster", "pine", "scout");
+  const other = rooms.join("CROWN7", "Bryn", "salt", "ranger");
+  const engine = new GameEngine();
+  engine.start(room, 1);
+  const state = engine.get(room.code)!;
+  const a = state.players.find(p => p.id === player.id)!;
+  const b = state.players.find(p => p.id === other.player.id)!;
+  return { room, engine, state, a, b };
+}
+
+test("looting is a two second channel that damage interrupts", () => {
+  const { room, engine, state, a } = twoPlayers();
+  state.loot = [{ id: "d1", item: "ration", count: 1, x: a.x, z: a.z }];
+  engine.action(room.code, a.id, { type: "loot", dropId: "d1" }, 1000);
+  assert.equal(a.looting?.dropId, "d1");
+  engine.tick(room, 1500);
+  assert.equal(a.inventory.some(x => x.item === "ration"), false, "not granted before 2s");
+  engine.tick(room, 3100);
+  assert.equal(a.inventory.some(x => x.item === "ration"), true, "granted after 2s");
+  assert.equal(a.looting, null);
+
+  state.loot = [{ id: "d2", item: "bandage", count: 1, x: a.x, z: a.z }];
+  engine.action(room.code, a.id, { type: "loot", dropId: "d2" }, 5000);
+  a.health -= 10;
+  engine.tick(room, 7500);
+  assert.equal(a.inventory.some(x => x.item === "bandage"), false, "damage cancels the channel");
+  assert.equal(state.loot.length, 1);
+});
+
+test("inventory swap reorders stacks but never moves the dagger", () => {
+  const { room, engine, a } = twoPlayers();
+  a.inventory = [{ item: "dagger", count: 1 }, { item: "ration", count: 2 }, { item: "bandage", count: 1 }];
+  engine.action(room.code, a.id, { type: "swap", a: 1, b: 2 }, 1000);
+  assert.deepEqual(a.inventory.map(s => s.item), ["dagger", "bandage", "ration"]);
+  engine.action(room.code, a.id, { type: "swap", a: 0, b: 1 }, 2000);
+  assert.equal(a.inventory[0]!.item, "dagger");
+  engine.action(room.code, a.id, { type: "swap", a: 1, b: 7 }, 3000);
+  assert.deepEqual(a.inventory.map(s => s.item), ["dagger", "ration", "bandage"]);
+});
+
+test("collapsed zones hurt more the longer you stay, and Base Camp stays safe", () => {
+  const { room, engine, state, a } = twoPlayers();
+  state.zone.collapsed = [2];
+  state.zone.collapsedAt = [0];
+  a.x = Math.cos(2 * Math.PI / 3) * 25; a.z = Math.sin(2 * Math.PI / 3) * 25;
+  const h0 = a.health;
+  engine.tick(room, 2_000);
+  const early = h0 - a.health;
+  a.health = 100;
+  engine.tick(room, 40_000);
+  const late = 100 - a.health;
+  assert.ok(early > 0 && late > early, `escalates: ${early} then ${late}`);
+  a.health = 100; a.x = 7.1; a.z = 0;
+  engine.tick(room, 41_000);
+  assert.ok(a.health > 99.9, "Base Camp ring is not a hazard");
+});
+
+test("the collapse order is seeded from the room code and never repeats a zone", () => {
+  const run = () => {
+    const { room, engine, state } = twoPlayers();
+    const seen: number[] = [];
+    let now = 1;
+    for (let i = 0; i < 5; i++) {
+      state.zone.nextCollapseAt = now;
+      engine.tick(room, now);
+      seen.push(state.zone.warningZone!);
+      now = state.zone.collapseAt! + 1;
+      engine.tick(room, now);
+    }
+    return seen;
+  };
+  const first = run();
+  assert.deepEqual(run(), first, "same code, same order");
+  assert.equal(new Set(first).size, 5);
+});
+
+test("the feed keeps Herald lines and emotes as separate entries", () => {
+  const { room, engine, state, a } = twoPlayers();
+  engine.action(room.code, a.id, { type: "emote", text: "Danger" }, 1000);
+  engine.action(room.code, a.id, { type: "emote", text: "Danger" }, 2000);
+  const emotes = state.feed!.filter(f => f.kind === "emote");
+  assert.equal(emotes.length, 2, "repeated identical emotes are both recorded");
+  assert.equal(emotes[0]!.actorId, a.id);
+});
+
+test("lobby players can change their look until the match starts", () => {
+  const rooms = new RoomManager(() => 1, () => "CROWN7");
+  const { room, player } = rooms.create("Aster", "pine", "scout");
+  rooms.update(room, player.id, { type: "set-profile", name: "  Asta  ", hearth: "frost", look: "warden" });
+  assert.deepEqual([player.name, player.hearth, player.look], ["Asta", "frost", "warden"]);
+  assert.throws(() => rooms.update(room, player.id, { type: "set-profile", name: "", hearth: "frost", look: "warden" }));
+});

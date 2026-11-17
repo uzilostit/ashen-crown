@@ -9,7 +9,7 @@ import {
 export interface Terrain {
   group: THREE.Group;
   /** Advance the animated water sheets; flood is 0..1 for the marsh collapse. */
-  update(time: number, flood: number): void;
+  update(time: number, flood: number, zones?: number[]): void;
   dispose(): void;
 }
 
@@ -36,7 +36,8 @@ function triangleGrid(a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2, n: n
   return g;
 }
 
-const WATER_Y = LAYER_T * 3.15;
+const WATER_Y = LAYER_T * 2.7;
+const TINT = ["#7aa65a", "#3a2a22", "#3a2a22", "#c8d65a", "#9fc6e0", "#a85a9a"].map((c) => new THREE.Color(c));
 
 export function buildTerrain(kit: PaperKit, step = 1.6): Terrain {
   const group = new THREE.Group();
@@ -46,7 +47,8 @@ export function buildTerrain(kit: PaperKit, step = 1.6): Terrain {
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) heights[j * n + i] = heightField(ox + i * step, ox + j * step);
   const toWorld = (p: number) => ox + (p - 0.5) * step;
   const rnd = mulberry32(5150);
-  const material = kit.mat("#ffffff", { vertexColors: true, repeat: 0.12, normalScale: 0.9 });
+  const baseMaterial = kit.mat("#ffffff", { vertexColors: true, repeat: 0.12, normalScale: 0.9 });
+  const wedgeMats: THREE.MeshStandardMaterial[] = [];
   const thresholds = Array.from({ length: LAYERS }, (_, k) => layerThreshold(k));
   const values = new Float64Array(n * n);
   const gen = contours().size([n, n]).thresholds(thresholds);
@@ -83,6 +85,8 @@ export function buildTerrain(kit: PaperKit, step = 1.6): Terrain {
     if (!parts.length) continue;
     const merged = mergeGeometries(parts, false)!;
     parts.forEach((p) => p.dispose());
+    const material = baseMaterial.clone();
+    wedgeMats[w] = material;
     const mesh = new THREE.Mesh(merged, material);
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.name = `terrain-${biome}`;
@@ -135,7 +139,14 @@ export function buildTerrain(kit: PaperKit, step = 1.6): Terrain {
 
   return {
     group,
-    update(time, flood) {
+    update(time, flood, zones) {
+      if (zones) zones.forEach((k, w) => {
+        const m = wedgeMats[w];
+        if (!m) return;
+        // collapsed zones scorch: ground darkens, fire wedges glow from below, fog wedges take a poisoned tint
+        m.color.setScalar(1 - 0.5 * k).lerp(TINT[w]!, 0.3 * k);
+        m.emissive.set(w === 1 || w === 2 ? "#ff3a10" : "#000000").multiplyScalar(0.16 * k);
+      });
       for (const s of sheets) {
         const p = s.mesh.geometry.attributes.position!;
         for (let i = 0; i < p.count; i++) {
