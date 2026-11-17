@@ -302,7 +302,28 @@ setInterval(() => {
 }, 100);
 
 /* ---------- boot ---------- */
-if (session) { screen = "resuming"; net.open(); setTimeout(() => { if (screen === "resuming") { localStorage.removeItem(SESSION); session = null; route(); } }, 8000); }
-else route();
+/** If the host set SITE_PASSPHRASE, ask for it before any socket opens. */
+async function ensureUnlocked() {
+  if (import.meta.env.DEV) return;
+  let state = { required: false, unlocked: true };
+  try { state = await (await fetch("/api/gate", { credentials: "same-origin" })).json(); } catch { return; }
+  if (!state.required || state.unlocked) return;
+  await new Promise<void>((done) => {
+    const err = h("p", { class: "error", role: "alert" });
+    const input = h("input", { type: "password", placeholder: "Passphrase", autocomplete: "current-password", "aria-label": "Passphrase" }) as HTMLInputElement;
+    const go = async () => {
+      const r = await fetch("/api/gate", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ passphrase: input.value }) });
+      if (r.ok) { card.remove(); done(); } else err.textContent = ((await r.json().catch(() => ({}))) as { error?: string }).error ?? "Try again.";
+    };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") void go(); });
+    const card = h("div", { class: "overlay" }, h("div", { class: "paper menu", role: "dialog", "aria-label": "Passphrase" }, h("h2", null, "Private game"), h("p", { class: "muted" }, "Ask the host for the passphrase."), input, err, h("button", { class: "btn primary", onclick: () => void go() }, "Enter")));
+    app.append(card);
+    input.focus();
+  });
+}
+void ensureUnlocked().then(() => {
+  if (session) { screen = "resuming"; net.open(); setTimeout(() => { if (screen === "resuming") { localStorage.removeItem(SESSION); session = null; route(); } }, 8000); }
+  else route();
+});
 void fmtTime;
 (window as unknown as { __ashen: unknown }).__ashen = { world, get game() { return game; }, get room() { return room; } };

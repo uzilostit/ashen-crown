@@ -6,11 +6,13 @@ import type { ClientMessage, ServerMessage } from "@ashen-crown/shared";
 import { RoomError, RoomManager, type Room } from "./rooms.js";
 import { Auth } from "./auth.js";
 import { GameEngine } from "./game.js";
+import { Gate, clientIp } from "./gate.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const rooms = new RoomManager();
 const auth = new Auth(); void auth.initialize();
 const game = new GameEngine();
+const gate = new Gate();
 const clients = new Map<WebSocket, { room: Room; playerId: string }>();
 const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" };
 const cookies = (value = "") => Object.fromEntries(value.split(";").map(v => v.trim().split(/=(.*)/s, 2)).filter(v => v.length === 2));
@@ -20,6 +22,11 @@ const send = (ws: WebSocket, message: ServerMessage) => { if (ws.readyState === 
 const broadcast = (room: Room) => { const message: ServerMessage = { type: "room-update", room: rooms.view(room) }; for (const [ws, state] of clients) if (state.room === room) send(ws, message); };
 const broadcastGame = (room: Room) => { const state = game.snapshot(room.code); if (!state) return; const message: ServerMessage = { type: "game-state", state }; for (const [ws, client] of clients) if (client.room === room) send(ws, message); };
 const http = createServer((req, res) => {
+  if (req.url === "/healthz") { res.writeHead(200, { "content-type": "text/plain" }); res.end("ok"); return; }
+  if (req.url === "/api/gate") {
+    if (req.method === "POST") { void readJson(req).then(({ passphrase }) => { const r = gate.attempt(clientIp(req), String(passphrase ?? "")); if ("cookie" in r) { res.setHeader("set-cookie", r.cookie); res.writeHead(200, { "content-type": "application/json" }); res.end("{\"unlocked\":true}"); } else { res.writeHead(401, { "content-type": "application/json" }); res.end(JSON.stringify({ error: r.error })); } }).catch(() => { res.writeHead(400); res.end(); }); return; }
+    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify({ required: gate.required, unlocked: gate.unlocked(req) })); return;
+  }
   if (req.url === "/auth/me") { const account = auth.get(cookies(req.headers.cookie).ac_session); res.writeHead(account ? 200 : 401, { "content-type": "application/json" }); res.end(JSON.stringify(account ? { name: account.name, email: account.email } : {})); return; }
   if (req.url === "/auth/register" || req.url === "/auth/login") { void readJson(req).then(async ({ email, name, password }) => { const session = req.url === "/auth/register" ? await auth.register(email, name, password) : await auth.login(email, password); setSession(res, session.id); res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ name: session.name, email: session.email })); }).catch(error => { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ error: error instanceof Error ? error.message : "Sign-in failed." })); }); return; }
   const raw = req.url === "/" ? "/index.html" : (req.url ?? "/index.html").split("?")[0];
@@ -31,7 +38,7 @@ const http = createServer((req, res) => {
   res.writeHead(200, { "content-type": types[extname(chosen)] ?? "application/octet-stream" }); createReadStream(chosen).pipe(res);
 });
 const wss = new WebSocketServer({ noServer: true });
-http.on("upgrade", (request, socket, head) => { if (request.url?.split("?")[0] !== "/ws") return socket.destroy(); wss.handleUpgrade(request, socket, head, ws => wss.emit("connection", ws)); });
+http.on("upgrade", (request, socket, head) => { if (request.url?.split("?")[0] !== "/ws") return socket.destroy(); if (!gate.unlocked(request)) { socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n"); return socket.destroy(); } wss.handleUpgrade(request, socket, head, ws => wss.emit("connection", ws)); });
 wss.on("connection", ws => {
   ws.on("message", data => {
     try {
