@@ -1,15 +1,15 @@
-FROM node:22-alpine AS build
+FROM node:22-slim AS build
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY client/package.json ./client/package.json
 COPY server/package.json ./server/package.json
 COPY shared/package.json ./shared/package.json
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 RUN npm prune --omit=dev
 
-FROM node:22-alpine AS runtime
+FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000
 COPY --from=build /app/node_modules ./node_modules
