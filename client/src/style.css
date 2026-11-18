@@ -12,13 +12,14 @@
   --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); color: var(--text); font-family: var(--body); font-size: 17px; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; background: var(--ink); color: var(--text); font-family: var(--body); font-size: 17px; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .world-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
-#ui > * { pointer-events: auto; }
+/* Containers never catch input, so the 3D canvas underneath still gets drags and wheel. Panels inside a .screen opt back in. */
+#ui > *, .tags, .tags > * { pointer-events: none; }
 .hidden { display: none !important; }
 
 /* ---------- paper primitives ---------- */
@@ -164,6 +165,7 @@ input::placeholder { color: #9a8f78; }
 .herald.on { opacity: 1; }
 .herald .who { background: var(--ember); color: #fff6e8; font-family: var(--display); font-weight: 900; text-transform: uppercase; letter-spacing: .1em; padding: .35rem .8rem; display: grid; place-items: center; border-radius: var(--cut) 0 0 var(--cut); }
 .herald .line { padding: .45rem 1rem; font-style: italic; font-size: 1.2rem; line-height: 1.25; background: rgba(25,32,38,.86); color: #f6eedb; border-radius: 0 12px 4px 0; backdrop-filter: blur(6px); box-shadow: 0 10px 20px rgba(0,0,0,.35); }
+.prompt, .prompt * { pointer-events: none !important; }
 .prompt { right: calc(var(--safe-r) + .9rem); bottom: calc(var(--safe-b) + .9rem); display: grid; gap: .45rem; justify-items: end; max-width: 280px; }
 .prompt .row { display: flex; align-items: center; gap: .55rem; padding: .35rem .7rem .35rem .4rem; }
 .kbd { display: inline-grid; place-items: center; min-width: 1.7rem; height: 1.7rem; padding: 0 .35rem; border-radius: 5px; background: var(--ink-2); color: var(--paper); font-family: var(--display); font-weight: 800; font-size: 1rem; box-shadow: 0 2px 0 #0e1418; }
@@ -264,3 +266,6 @@ html.touch-ui .acts button { height: 42px; font-size: .74rem; }
 html.touch-ui .toolbtns { grid-auto-flow: column; top: calc(var(--safe-t) + 9.6rem); right: calc(var(--safe-r) + .9rem); }
 html.touch-ui .side-panel { width: 160px; }
 html.touch-ui .side-panel .paper { padding: .3rem .5rem; }
+
+input { -webkit-user-select: text; user-select: text; }
+.tags .bubble, .tags .tag { pointer-events: none; }

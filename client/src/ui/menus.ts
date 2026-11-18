@@ -6,7 +6,7 @@ import { crestSvg } from "./crest";
 import { h } from "./dom";
 import { itemIcon } from "./studio";
 
-export interface MenuCtx { send(m: ClientMessage): void; audio: AudioEngine; quality: QualityController; leave(): void }
+export interface MenuCtx { send(m: ClientMessage): void; audio: AudioEngine; quality: QualityController; leave(): void; fullscreen?(): void }
 
 /** Closeable overlay. Click the backdrop or press Escape to dismiss. */
 function overlay(parent: HTMLElement, body: HTMLElement, onClose: () => void) {
@@ -62,8 +62,9 @@ export function openInventory(parent: HTMLElement, ctx: MenuCtx, getMe: () => Ga
   return { el: o, render, close: () => o.remove() };
 }
 
-export function openEmoteWheel(parent: HTMLElement, ctx: MenuCtx, spectator: boolean, onPick: (text: string) => void) {
+export function openEmoteWheel(parent: HTMLElement, ctx: MenuCtx, spectator: boolean, onPick: (text: string) => void, onClose?: () => void) {
   const items = spectator ? SPECTATOR_CHEERS : EMOTES;
+  const backdrop = h("div", { class: "overlay", style: { background: "transparent", backdropFilter: "none" }, onclick: () => close() });
   const el = h("div", { class: "wheel", role: "menu" }, h("div", { class: "hub" }, spectator ? "Cheer" : "Signal"));
   items.forEach((t, i) => {
     const a = (i / items.length) * Math.PI * 2 - Math.PI / 2;
@@ -71,7 +72,7 @@ export function openEmoteWheel(parent: HTMLElement, ctx: MenuCtx, spectator: boo
     b.dataset.i = String(i);
     el.append(b);
   });
-  parent.append(el);
+  parent.append(backdrop, el);
   const hover = (e: PointerEvent) => {
     const r = el.getBoundingClientRect(), a = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
     const i = Math.round((((a + Math.PI / 2) / (Math.PI * 2)) * items.length + items.length) % items.length) % items.length;
@@ -79,9 +80,10 @@ export function openEmoteWheel(parent: HTMLElement, ctx: MenuCtx, spectator: boo
   };
   addEventListener("pointermove", hover);
   void ctx;
+  const close = () => { removeEventListener("pointermove", hover); el.remove(); backdrop.remove(); onClose?.(); };
   return {
     pick() { const hot = el.querySelector<HTMLElement>("button.hot"); if (hot) onPick(items[Number(hot.dataset.i)]!); },
-    close() { removeEventListener("pointermove", hover); el.remove(); },
+    close,
   };
 }
 
@@ -95,7 +97,7 @@ export function openMenu(parent: HTMLElement, ctx: MenuCtx, onClose: () => void,
     h("h2", null, helpOnly ? "How to survive" : "Menu"),
     helpOnly ? null : h("div", null, h("h3", null, "Sound"), slider("master", "Master"), slider("music", "Music"), slider("sfx", "Effects"),
       h("div", { class: "row" }, h("span", null, "Mute"), h("div", { class: "toggle" }, h("button", { role: "switch", "aria-checked": String(a.settings.muted), "aria-label": "Mute", onclick: (e: Event) => { const b = e.currentTarget as HTMLElement; const m = !a.settings.muted; a.set({ muted: m }); b.setAttribute("aria-checked", String(m)); } }))),
-      h("h3", null, "Graphics"), h("div", { class: "seg" }, ...qBtns), h("p", { class: "muted" }, q.auto ? `Adapting automatically. Now: ${q.profile.name}.` : `Fixed at ${q.profile.name}.`)),
+      h("h3", null, "Graphics"), ctx.fullscreen && document.fullscreenEnabled ? h("button", { class: "btn small", onclick: () => ctx.fullscreen!() }, "Toggle fullscreen") : null, h("div", { class: "seg" }, ...qBtns), h("p", { class: "muted" }, q.auto ? `Adapting automatically. Now: ${q.profile.name}.` : `Fixed at ${q.profile.name}.`)),
     h("h3", null, "Controls"), h("div", { class: "keys keys-help" }, ...keys.flatMap(([k, v]) => [h("span", { class: "kbd" }, k), h("span", null, v)])),
     h("p", { class: "muted" }, "Stay out of collapsing zones, loot Base Camp at your own risk, and only two seats fly out."),
     helpOnly ? null : h("div", { style: { display: "flex", gap: ".6rem" } }, h("button", { class: "btn primary", onclick: () => { close(); onClose(); } }, "Resume"), h("button", { class: "btn", onclick: () => { close(); ctx.leave(); } }, "Leave match")),

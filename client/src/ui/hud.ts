@@ -13,7 +13,7 @@ import { itemIcon } from "./studio";
 
 export interface HudCtx {
   world: World; send(m: ClientMessage): void; audio: AudioEngine; voice: Voice; controls: Controls;
-  selfId(): string; openInventory(): void; openEmote(): void; openMenu(): void; enableVoice(): void;
+  selfId(): string; act(kind: "strike" | "loot" | "ally" | "flare"): void; fullscreen(): void; openInventory(): void; openEmote(): void; openMenu(): void; enableVoice(): void;
   selectedSlot(): number; selectSlot(i: number): void;
 }
 
@@ -62,7 +62,8 @@ export class Hud {
     const toolbtns = h("div", { class: "toolbtns" },
       h("button", { class: "btn ghost small", onclick: () => ctx.openInventory() }, "Pack"),
       h("button", { class: "btn ghost small", onclick: () => ctx.openEmote() }, "Signal"),
-      h("button", { class: "btn ghost small", onclick: () => ctx.openMenu() }, "Menu"));
+      h("button", { class: "btn ghost small", onclick: () => ctx.openMenu() }, "Menu"),
+      document.fullscreenEnabled ? h("button", { class: "btn ghost small", onclick: () => ctx.fullscreen() }, "Full") : null);
     const mini = h("div", { class: "paper dark mini" }, this.mini);
     this.el = h("div", { class: "screen hud" }, this.card, this.banner, this.compass, mini, toolbtns, this.side, this.stats, this.hotbar, this.herald, this.prompt, this.touch());
     parent.append(this.tags, this.el);
@@ -87,13 +88,13 @@ export class Hud {
       if (up) for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, up);
       return b;
     };
-    const key = (k: string) => () => window.dispatchEvent(new KeyboardEvent("keydown", { key: k }));
+    const act = (kind: "strike" | "loot" | "ally" | "flare") => () => c.act(kind);
     const acts = h("div", { class: "acts" },
-      press("Strike", "hot", key("f")), press("Loot", "", key("e")), press("Pact", "", key("r")),
+      press("Strike", "hot", act("strike")), press("Loot", "", act("loot")), press("Pact", "", act("ally")),
       press("Dodge", "", () => c.controls.hold("dodge", true), () => c.controls.hold("dodge", false)),
       press("Block", "", () => c.controls.hold("block", true), () => c.controls.hold("block", false)),
       press("Run", "", () => c.controls.hold("run", true), () => c.controls.hold("run", false)),
-      press("Flare", "", key("x")), press("Voice", "", () => c.voice.status === "off" ? c.enableVoice() : c.voice.setPtt(true), () => c.voice.setPtt(false)));
+      press("Flare", "", act("flare")), press("Voice", "", () => c.voice.status === "off" ? c.enableVoice() : c.voice.setPtt(true), () => c.voice.setPtt(false)));
     return h("div", { class: "touch" }, stick, acts);
   }
 

@@ -1,7 +1,7 @@
 import "./style.css";
 import { HEARTHS, type ClientMessage, type FeedEntry, type FigureLook, type GamePlayer, type GameState, type Hearth, type RoomView, type ServerMessage } from "@ashen-crown/shared";
 import { audio, type MusicPhase } from "./audio";
-import { Controls, findTargets } from "./controls";
+import { Controls, findTargets, type ControlHooks } from "./controls";
 import { HEARTH_INFO, LOOKS, itemName } from "./content";
 import { Net } from "./net";
 import { QualityController } from "./render/quality";
@@ -31,6 +31,8 @@ const selected = { slot: 0 };
 const params = new URLSearchParams(location.search);
 const prefill = (params.get("room") ?? "").toUpperCase();
 if (matchMedia("(pointer: coarse)").matches || params.get("touch") === "1") document.documentElement.classList.add("touch-ui");
+// Tablets that report a fine pointer (desktop-mode browsers, keyboard cases) switch to touch controls on the first real touch.
+addEventListener("pointerdown", (e) => { if (e.pointerType === "touch") document.documentElement.classList.add("touch-ui"); }, { capture: true });
 
 /* ---------- shell ---------- */
 const quality = new QualityController();
@@ -63,7 +65,7 @@ const leave = () => { localStorage.removeItem(SESSION); location.href = location
 let inventory: ReturnType<typeof openInventory> | null = null;
 let wheel: ReturnType<typeof openEmoteWheel> | null = null;
 let menu: { close(): void } | null = null;
-const menuCtx = { send, audio, quality, leave };
+const menuCtx = { send, audio, quality, leave, fullscreen: () => toggleFullscreen() };
 
 const toggleInventory = () => {
   if (screen !== "hud") return;
@@ -74,19 +76,25 @@ const toggleMenu = (help = false) => {
   if (menu) { menu.close(); menu = null; return; }
   menu = openMenu(app, menuCtx, () => { menu = null; }, help);
 };
+let wheelHeld = false;
+function showWheel(held = true) {
+  if (wheel) return;
+  wheelHeld = held;
+  const spectator = !me()?.alive;
+  wheel = openEmoteWheel(app, menuCtx, spectator, (text) => { send({ type: "game-action", action: spectator ? { type: "spectator-chat", text } : { type: "emote", text } }); audio.emote(); wheel?.close(); }, () => { wheel = null; });
+}
+const toggleFullscreen = () => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.().catch(() => {}); };
 const startVoice = () => { if (game) void voice.enable(selfId, game.players); };
 
-const controls = new Controls(world, send, {
+const hooks: ControlHooks = {
   inventory: toggleInventory,
   menu: () => { if (inventory) { inventory.close(); inventory = null; } else toggleMenu(); },
   help: () => toggleMenu(true),
   voice: (down) => { if (down && voice.status === "off") startVoice(); else voice.setPtt(down); },
   slot: (i) => { const s = me()?.inventory[i]; if (s) { selected.slot = i; send({ type: "game-action", action: { type: "use", slot: i } }); } },
   wheel: (open) => {
-    if (open && !wheel && screen === "hud") {
-      const spectator = !me()?.alive;
-      wheel = openEmoteWheel(app, menuCtx, spectator, (text) => { send({ type: "game-action", action: spectator ? { type: "spectator-chat", text } : { type: "emote", text } }); audio.emote(); wheel?.close(); wheel = null; });
-    } else if (!open && wheel) { wheel.pick(); wheel?.close(); wheel = null; }
+    if (open && !wheel && screen === "hud") showWheel();
+    else if (!open && wheel && wheelHeld) { wheel.pick(); wheel.close(); }
   },
   action: (kind) => {
     const g = game, p = me();
@@ -105,7 +113,8 @@ const controls = new Controls(world, send, {
     else if (kind === "flare" && t.canFlare) send({ type: "game-action", action: g.phase === "helicopter" ? { type: "board-helicopter" } : { type: "flare" } });
     else if (kind === "drop-selected") { const s = p.inventory[selected.slot]; if (s && s.item !== "dagger") send({ type: "game-action", action: { type: "drop", slot: selected.slot } }); }
   },
-});
+};
+const controls = new Controls(world, send, hooks);
 controls.enabled = false;
 world.cutAllowed = () => { const p = me(); if (!p || !game) return true; const near = game.players.some((o) => o.id !== p.id && o.alive && !o.escaped && Math.hypot(o.x - p.x, o.z - p.z) < 12 && !(p.allianceId && o.allianceId === p.allianceId)); return !(near || Date.now() < dmgUntil); };
 world.cutListener = (e) => {
@@ -171,7 +180,7 @@ function route() {
   } else if (want === "hud") {
     world.setMode("game");
     world.lobbyFocus = null;
-    hud = new Hud(ui, { world, send, audio, voice, controls, selfId: () => selfId, openInventory: toggleInventory, openEmote: () => { controls.keys.add("c"); window.dispatchEvent(new KeyboardEvent("keydown", { key: "c" })); }, openMenu: () => toggleMenu(), enableVoice: startVoice, selectedSlot: () => selected.slot, selectSlot: (i) => { selected.slot = i; } });
+    hud = new Hud(ui, { world, send, audio, voice, controls, selfId: () => selfId, openInventory: toggleInventory, act: (k) => hooks.action(k), fullscreen: toggleFullscreen, openEmote: () => (wheel ? wheel.close() : showWheel(false)), openMenu: () => toggleMenu(), enableVoice: startVoice, selectedSlot: () => selected.slot, selectSlot: (i) => { selected.slot = i; } });
     world.onFrame = (dt) => { hud?.frame(dt); const p = me(); if (game) voice.update(p, game.players); updateChannel(p); };
     controls.enabled = true;
   }
@@ -326,4 +335,4 @@ void ensureUnlocked().then(() => {
   else route();
 });
 void fmtTime;
-(window as unknown as { __ashen: unknown }).__ashen = { world, get game() { return game; }, get room() { return room; } };
+(window as unknown as { __ashen: unknown }).__ashen = { world, controls, get game() { return game; }, get room() { return room; } };
