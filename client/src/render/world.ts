@@ -130,7 +130,7 @@ export class World {
   constructor(host: HTMLElement, quality: QualityController) {
     this.quality = quality;
     const p = quality.profile;
-    this.renderer = new THREE.WebGLRenderer({ antialias: quality.tier <= 1, powerPreference: "high-performance", stencil: false });
+    this.renderer = new THREE.WebGLRenderer({ antialias: quality.tier <= 2, powerPreference: "high-performance", stencil: false });
     this.canvas = this.renderer.domElement;
     this.canvas.className = "world-canvas";
     host.prepend(this.canvas);
@@ -193,7 +193,7 @@ export class World {
     const w = innerWidth, h = innerHeight;
     this.renderer.setSize(w, h);
     this.post.configure(p, w * (devicePixelRatio ? Math.min(devicePixelRatio, p.pixelRatio) : 1), h * Math.min(devicePixelRatio || 1, p.pixelRatio));
-    if (this.quality.tier <= 1) { (this.post.composer.renderTarget1 as THREE.WebGLRenderTarget).samples = 4; (this.post.composer.renderTarget2 as THREE.WebGLRenderTarget).samples = 4; }
+    if (this.quality.tier <= 3) { const s = this.quality.tier <= 2 ? 4 : 2; (this.post.composer.renderTarget1 as THREE.WebGLRenderTarget).samples = s; (this.post.composer.renderTarget2 as THREE.WebGLRenderTarget).samples = s; }
     this.post.composer.setPixelRatio(Math.min(devicePixelRatio || 1, p.pixelRatio));
     this.post.composer.setSize(w, h);
     this.updateShadowFrustum();
@@ -253,7 +253,7 @@ export class World {
       this.pedestals.place(i, Math.cos(a) * SPAWN_R, Math.sin(a) * SPAWN_R);
     });
     this.clearLoot();
-    this.hazards.update(0, this.t, null, [], this.quality.tier);
+    this.hazards.update(0, this.t, null, [], 0);
   }
 
   setGame(state: GameState, selfId: string, roomSize: number) {
@@ -498,7 +498,7 @@ export class World {
 
     // world animation
     const zone = s?.zone;
-    const flood = this.hazards.update(dt, t, zone?.warningZone ?? null, zone?.collapsed ?? [], this.quality.tier);
+    const flood = this.hazards.update(dt, t, zone?.warningZone ?? null, zone?.collapsed ?? [], this.quality.tier >= 4 ? 3 : 0);
     this.terrain.update(t, flood, this.hazards.intensity);
     this.camp.update(t);
     this.fog.update(t);

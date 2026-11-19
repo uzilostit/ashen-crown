@@ -269,3 +269,9 @@ html.touch-ui .side-panel .paper { padding: .3rem .5rem; }
 
 input { -webkit-user-select: text; user-select: text; }
 .tags .bubble, .tags .tag { pointer-events: none; }
+
+.gfx { display: flex; align-items: center; gap: .6rem; color: #fff6df; text-shadow: 0 1px 6px #000; font-family: var(--display); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.gfx .seg { flex: 1; max-width: 420px; background: rgba(20,28,34,.55); border-color: rgba(237,228,207,.4); }
+.gfx .seg button { background: transparent; color: var(--paper); padding: .3rem .3rem; font-size: .95rem; }
+.gfx .seg button + button { border-left-color: rgba(237,228,207,.3); }
+.gfx .seg button[aria-pressed=true] { background: var(--paper); color: var(--text); }

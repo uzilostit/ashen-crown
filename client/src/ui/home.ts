@@ -12,6 +12,7 @@ export interface HomeCtx {
   create(i: Identity): void;
   join(code: string, i: Identity): void;
   sfx(kind: "click"): void;
+  graphics: { auto: boolean; tier: number; names: string[]; choose(v: "auto" | number): void };
 }
 
 /** Character creator and the two doors: create a room, or join one with a code. */
@@ -66,6 +67,8 @@ export function mountHome(parent: HTMLElement, ctx: HomeCtx) {
       h("div", { class: "paper door" }, h("h2", null, "Host a game"), h("p", { class: "muted" }, "Get a code and an invite link for your friends."), create),
       h("div", { class: "paper door" }, h("h2", null, "Have a code?"), code, joinBtn)),
     err,
+    h("div", { class: "gfx" }, h("span", null, "Graphics"), h("div", { class: "seg", role: "group", "aria-label": "Graphics quality" },
+      ...(["auto", ...ctx.graphics.names.map((_, i) => i)] as ("auto" | number)[]).map((v) => h("button", { "aria-pressed": String(v === "auto" ? ctx.graphics.auto : !ctx.graphics.auto && ctx.graphics.tier === v), onclick: () => ctx.graphics.choose(v) }, v === "auto" ? "Auto" : ctx.graphics.names[v]!)))),
     h("p", { class: "foot-note" }, "Private rooms for 2 to 15 players. Headphones recommended."));
   parent.append(el);
 

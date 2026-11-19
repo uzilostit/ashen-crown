@@ -4,7 +4,7 @@ import { audio, type MusicPhase } from "./audio";
 import { Controls, findTargets, type ControlHooks } from "./controls";
 import { HEARTH_INFO, LOOKS, itemName } from "./content";
 import { Net } from "./net";
-import { QualityController } from "./render/quality";
+import { PROFILES, QualityController } from "./render/quality";
 import { BIOME_NAMES } from "./render/util";
 import { World } from "./render/world";
 import { fmtTime, h } from "./ui/dom";
@@ -160,6 +160,7 @@ function route() {
     world.setMode("menu", 0.17);
     home = mountHome(ui, {
       identity, prefillCode: prefill, sfx: () => {},
+      graphics: { auto: quality.auto, tier: quality.tier, names: PROFILES.map((p) => p.name), choose: (v) => { quality.set(v); location.reload(); } },
       save: (i) => { identity = i; localStorage.setItem(IDENT, JSON.stringify(i)); },
       create: (i) => { session = null; send({ type: "create-room", name: i.name, hearth: i.hearth, look: i.look }); },
       join: (code, i) => { session = null; send({ type: "join-room", code, name: i.name, hearth: i.hearth, look: i.look }); },
