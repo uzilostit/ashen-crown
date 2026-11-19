@@ -129,7 +129,7 @@ export class Controls {
   };
   private pUp = (e: PointerEvent) => { this.pointers.delete(e.pointerId); };
   private span() { const [a, b] = [...this.pointers.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0; }
-  private wheel = (e: WheelEvent) => { if (this.world.mode === "game") this.world.zoom(Math.sign(e.deltaY) * 2.2); };
+  private wheel = (e: WheelEvent) => { if (this.world.mode === "game") this.world.zoom(Math.max(-60, Math.min(60, e.deltaY)) * 0.02); };
 
   private tick() {
     const g = this.game, me = this.me;

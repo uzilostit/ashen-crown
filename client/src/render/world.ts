@@ -110,6 +110,8 @@ export class World {
   private shake = 0;
   private disposed = false;
   private frameDt = 0.016;
+  /** Smoothed frames per second, for diagnostics. */
+  fps = 0;
 
   // camera rig
   yaw = 0;
@@ -375,8 +377,10 @@ export class World {
     this.pitch = clamp(this.pitch + dpitch, 0.16, 1.2);
   }
   zoom(delta: number) {
-    this.dist = clamp(this.dist + delta, 8, 70);
+    this.dist = clamp(this.dist + delta, 8, 48);
   }
+  /** Back to the default over-the-shoulder framing. */
+  resetCamera() { this.yaw = 0; this.pitch = 0.5; this.dist = 20; }
   setLocalPose(p: { block: boolean; sprint: boolean }) { this.localPose = p; }
   setTarget(id: string | null) { this.targetId = id; }
   hitFlash(a = 0.3) { this.flash = Math.min(0.6, this.flash + a); }
@@ -431,6 +435,7 @@ export class World {
     const dt = Math.min(0.05, dtMs / 1000);
     this.t += dt;
     this.frameDt = dt;
+    this.fps = Math.round((this.fps || 60) * 0.95 + (1000 / Math.max(1, dtMs)) * 0.05);
     this.quality.sample(dtMs);
     this.update(dt, now);
     this.post.render(dt);

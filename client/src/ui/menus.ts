@@ -6,7 +6,7 @@ import { crestSvg } from "./crest";
 import { h } from "./dom";
 import { itemIcon } from "./studio";
 
-export interface MenuCtx { send(m: ClientMessage): void; audio: AudioEngine; quality: QualityController; leave(): void; fullscreen?(): void }
+export interface MenuCtx { resetCamera?(): void; send(m: ClientMessage): void; audio: AudioEngine; quality: QualityController; leave(): void; fullscreen?(): void }
 
 /** Closeable overlay. Click the backdrop or press Escape to dismiss. */
 function overlay(parent: HTMLElement, body: HTMLElement, onClose: () => void) {
@@ -97,7 +97,7 @@ export function openMenu(parent: HTMLElement, ctx: MenuCtx, onClose: () => void,
     h("h2", null, helpOnly ? "How to survive" : "Menu"),
     helpOnly ? null : h("div", null, h("h3", null, "Sound"), slider("master", "Master"), slider("music", "Music"), slider("sfx", "Effects"),
       h("div", { class: "row" }, h("span", null, "Mute"), h("div", { class: "toggle" }, h("button", { role: "switch", "aria-checked": String(a.settings.muted), "aria-label": "Mute", onclick: (e: Event) => { const b = e.currentTarget as HTMLElement; const m = !a.settings.muted; a.set({ muted: m }); b.setAttribute("aria-checked", String(m)); } }))),
-      h("h3", null, "Graphics"), ctx.fullscreen && document.fullscreenEnabled ? h("button", { class: "btn small", onclick: () => ctx.fullscreen!() }, "Toggle fullscreen") : null, h("div", { class: "seg" }, ...qBtns), h("p", { class: "muted" }, q.auto ? `Adapting automatically. Now: ${q.profile.name}.` : `Fixed at ${q.profile.name}.`)),
+      ctx.resetCamera ? h("button", { class: "btn small", onclick: () => ctx.resetCamera!() }, "Reset camera") : null, h("h3", null, "Graphics"), ctx.fullscreen && document.fullscreenEnabled ? h("button", { class: "btn small", onclick: () => ctx.fullscreen!() }, "Toggle fullscreen") : null, h("div", { class: "seg" }, ...qBtns), h("p", { class: "muted" }, q.auto ? `Adapting automatically. Now: ${q.profile.name}.` : `Fixed at ${q.profile.name}.`)),
     h("h3", null, "Controls"), h("div", { class: "keys keys-help" }, ...keys.flatMap(([k, v]) => [h("span", { class: "kbd" }, k), h("span", null, v)])),
     h("p", { class: "muted" }, "Stay out of collapsing zones, loot Base Camp at your own risk, and only two seats fly out."),
     helpOnly ? null : h("div", { style: { display: "flex", gap: ".6rem" } }, h("button", { class: "btn primary", onclick: () => { close(); onClose(); } }, "Resume"), h("button", { class: "btn", onclick: () => { close(); ctx.leave(); } }, "Leave match")),

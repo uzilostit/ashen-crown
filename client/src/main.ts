@@ -13,6 +13,7 @@ import { mountHome, type Identity } from "./ui/home";
 import { mountLobby } from "./ui/lobby";
 import { openEmoteWheel, openInventory, openMenu, showResult } from "./ui/menus";
 import { Voice } from "./voice";
+import { initDiag, reportDiag, updateDiag } from "./diag";
 
 const app = document.getElementById("app")!;
 const SESSION = "ashen-crown-session", IDENT = "ashen-crown-identity";
@@ -47,6 +48,10 @@ const loading = h("div", { class: "loading" }, "Folding paper…");
 app.append(ui, toasts, conn, letterbox, cutBanner, dmg, channel, loading);
 const world = new World(app, quality);
 world.setMode("menu", 0.17);
+initDiag(world.renderer.getContext(), quality.tier, quality.profile.name, quality.auto);
+quality.onChange((p, t) => { updateDiag({ tier: t, profile: p.name }); reportDiag("tier"); });
+setTimeout(() => reportDiag("perf10", { fps: world.fps }), 12000);
+setTimeout(() => reportDiag("perf40", { fps: world.fps, mode: world.mode }), 40000);
 setTimeout(() => loading.classList.add("done"), 900);
 setTimeout(() => loading.remove(), 1700);
 
@@ -65,7 +70,7 @@ const leave = () => { localStorage.removeItem(SESSION); location.href = location
 let inventory: ReturnType<typeof openInventory> | null = null;
 let wheel: ReturnType<typeof openEmoteWheel> | null = null;
 let menu: { close(): void } | null = null;
-const menuCtx = { send, audio, quality, leave, fullscreen: () => toggleFullscreen() };
+const menuCtx = { resetCamera: () => world.resetCamera(), send, audio, quality, leave, fullscreen: () => toggleFullscreen() };
 
 const toggleInventory = () => {
   if (screen !== "hud") return;

@@ -13,6 +13,8 @@ const rooms = new RoomManager();
 const auth = new Auth(); void auth.initialize();
 const game = new GameEngine();
 const gate = new Gate();
+let diagBudget = 200; // anonymous client diagnostics per server process, so logs can't be flooded
+setInterval(() => { diagBudget = Math.min(200, diagBudget + 20); }, 60_000).unref();
 const clients = new Map<WebSocket, { room: Room; playerId: string }>();
 const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" };
 const cookies = (value = "") => Object.fromEntries(value.split(";").map(v => v.trim().split(/=(.*)/s, 2)).filter(v => v.length === 2));
@@ -22,6 +24,7 @@ const send = (ws: WebSocket, message: ServerMessage) => { if (ws.readyState === 
 const broadcast = (room: Room) => { const message: ServerMessage = { type: "room-update", room: rooms.view(room) }; for (const [ws, state] of clients) if (state.room === room) send(ws, message); };
 const broadcastGame = (room: Room) => { const state = game.snapshot(room.code); if (!state) return; const message: ServerMessage = { type: "game-state", state }; for (const [ws, client] of clients) if (client.room === room) send(ws, message); };
 const http = createServer((req, res) => {
+  if (req.url === "/api/diag" && req.method === "POST") { void readJson(req).then((d) => { if (diagBudget-- > 0) console.log("[diag]", JSON.stringify(d).slice(0, 600)); res.writeHead(204); res.end(); }).catch(() => { res.writeHead(400); res.end(); }); return; }
   if (req.url === "/healthz") { res.writeHead(200, { "content-type": "text/plain" }); res.end("ok"); return; }
   if (req.url === "/api/gate") {
     if (req.method === "POST") { void readJson(req).then(({ passphrase }) => { const r = gate.attempt(clientIp(req), String(passphrase ?? "")); if ("cookie" in r) { res.setHeader("set-cookie", r.cookie); res.writeHead(200, { "content-type": "application/json" }); res.end("{\"unlocked\":true}"); } else { res.writeHead(401, { "content-type": "application/json" }); res.end(JSON.stringify({ error: r.error })); } }).catch(() => { res.writeHead(400); res.end(); }); return; }
