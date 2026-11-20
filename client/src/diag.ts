@@ -11,7 +11,7 @@ export function reportDiag(kind: string, extra: Info = {}) {
   } catch { /* diagnostics must never break the game */ }
 }
 
-export function initDiag(gl: WebGLRenderingContext | WebGL2RenderingContext, tier: number, profile: string, auto: boolean) {
+export function initDiag(gl: WebGLRenderingContext | WebGL2RenderingContext, tier: number, profile: string, auto: boolean, caps?: Info) {
   const dbg = gl.getExtension("WEBGL_debug_renderer_info");
   base = {
     ua: navigator.userAgent.slice(0, 160),
@@ -21,6 +21,9 @@ export function initDiag(gl: WebGLRenderingContext | WebGL2RenderingContext, tie
     gl: String(gl.getParameter(gl.VERSION)).slice(0, 40),
     cores: navigator.hardwareConcurrency,
     tier, profile, auto,
+    ext: ["EXT_color_buffer_float", "EXT_color_buffer_half_float", "OES_texture_float_linear", "WEBGL_depth_texture"].filter((e) => gl.getExtension(e)).map((e) => e.replace(/^(EXT|OES|WEBGL)_/, "")).join(","),
+    maxTex: gl.getParameter(gl.MAX_TEXTURE_SIZE), maxSamples: (gl as WebGL2RenderingContext).getParameter?.((gl as WebGL2RenderingContext).MAX_SAMPLES),
+    ...caps,
   };
   reportDiag("boot");
   addEventListener("error", (e) => reportDiag("error", { msg: String(e.message).slice(0, 200) }));

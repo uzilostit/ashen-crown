@@ -36,28 +36,42 @@ const GradeShader = {
     }`,
 };
 
+export interface PostCaps { halfFloat: boolean; msaa: boolean }
+
 export class PostStack {
+  /** Called once if the post chain produced a blank frame; the owner should fall back to plain rendering. */
+  onBlank: ((where: "post" | "direct") => void) | null = null;
+  private guardFrames = 0;
+  private guardDone = false;
+  private blankChecks = 0;
   readonly composer: EffectComposer;
   private pass = { render: null as RenderPass | null, ao: null as GTAOPass | null, bloom: null as UnrealBloomPass | null, h: null as ShaderPass | null, v: null as ShaderPass | null, out: null as OutputPass | null, grade: null as ShaderPass | null };
   private enabled = true;
   focus = 0.52;
   private profile: QualityProfile | null = null;
 
+  caps: PostCaps;
   constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene, private camera: THREE.PerspectiveCamera, w: number, h: number) {
-    this.composer = new EffectComposer(renderer);
+    const ext = renderer.extensions;
+    // Half-float targets need one of these; multisampled half-float needs the full float extension. Strict browsers hide them.
+    this.caps = { halfFloat: ext.has("EXT_color_buffer_float") || ext.has("EXT_color_buffer_half_float"), msaa: ext.has("EXT_color_buffer_float") };
+    const target = new THREE.WebGLRenderTarget(w, h, { type: this.caps.halfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType });
+    this.composer = new EffectComposer(renderer, target);
     this.composer.setSize(w, h);
   }
 
   /** Rebuild the pass chain for a quality profile. */
   configure(p: QualityProfile, w: number, h: number) {
     this.profile = p;
+    this.guardFrames = 0;
+    this.guardDone = false;
     this.composer.passes.length = 0;
     const post = p.ao || p.bloom || p.tilt || p.grade;
     this.enabled = post;
     if (!post) return;
     this.pass.render = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.pass.render);
-    if (p.ao) {
+    if (p.ao && this.caps.halfFloat) {
       this.pass.ao = new GTAOPass(this.scene, this.camera, w, h);
       this.pass.ao.output = GTAOPass.OUTPUT.Default;
       this.pass.ao.updateGtaoMaterial({ radius: 1.4, distanceExponent: 1.6, thickness: 1.5, scale: 1.1, samples: 12 });
@@ -107,6 +121,23 @@ export class PostStack {
   render(dt: number) {
     if (this.enabled) this.composer.render(dt);
     else this.renderer.render(this.scene, this.camera);
+    if (!this.guardDone && ++this.guardFrames === 24) this.checkNotBlank();
+  }
+
+  /** Reads a few pixels of what was just drawn. A scene that is all zeros means this browser can't run the current chain. */
+  private checkNotBlank() {
+    const gl = this.renderer.getContext();
+    try {
+      const px = new Uint8Array(4);
+      let lit = 0;
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      for (const [fx, fy] of [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7], [0.5, 0.15]] as const) {
+        gl.readPixels(Math.floor(w * fx), Math.floor(h * fy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        if (px[0]! + px[1]! + px[2]! > 12 && px[3]! > 0) lit++;
+      }
+      this.guardDone = true;
+      if (lit === 0) { this.blankChecks++; this.onBlank?.(this.enabled ? "post" : "direct"); }
+    } catch { this.guardDone = true; /* reading back may be blocked; nothing to conclude */ }
   }
   dispose() {
     this.composer.dispose();

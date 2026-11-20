@@ -3,7 +3,9 @@ import type { FigureLook, Hearth, ItemId } from "@ashen-crown/shared";
 import { PaperFigure } from "../render/figure";
 import { buildItem } from "../render/items";
 import { PaperKit } from "../render/paper";
-import { HEARTH_INFO, skinFor } from "../content";
+import { HEARTH_INFO, itemName, skinFor } from "../content";
+import { ITEM_ACCENT } from "../render/items";
+import { reportDiag } from "../diag";
 
 /** One small offscreen renderer that photographs paper models: hotbar icons and character previews. */
 class Studio {
@@ -15,7 +17,13 @@ class Studio {
   private fig: { key: string; f: PaperFigure } | null = null;
 
   constructor() {
-    this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+    // Some browsers (Brave with Shields up) refuse extra contexts or flags, so try progressively plainer options.
+    let r: THREE.WebGLRenderer | null = null;
+    for (const opts of [{ alpha: true, antialias: true, preserveDrawingBuffer: true }, { alpha: true, antialias: false, preserveDrawingBuffer: true }, { alpha: true }]) {
+      try { r = new THREE.WebGLRenderer(opts); break; } catch { /* try the next set */ }
+    }
+    if (!r) throw new Error("no studio context");
+    this.renderer = r;
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -81,5 +89,40 @@ class Studio {
 }
 
 let studio: Studio | null = null;
-export const getStudio = () => (studio ??= new Studio());
-export const itemIcon = (item: ItemId) => getStudio().icon(item);
+let studioFailed = false;
+/** The studio is optional decoration. If the browser won't give a second WebGL context we never ask again. */
+export function getStudio(): Studio | null {
+  if (studio || studioFailed) return studio;
+  try { studio = new Studio(); } catch { studioFailed = true; reportDiag("studio-failed"); }
+  return studio;
+}
+
+const fallbackIcons = new Map<string, string>();
+/** Flat 2D icon used when the studio is unavailable. */
+function fallbackIcon(item: ItemId): string {
+  let url = fallbackIcons.get(item);
+  if (!url) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 96;
+    const g = c.getContext("2d")!;
+    g.fillStyle = ITEM_ACCENT[item];
+    g.beginPath(); g.roundRect(14, 14, 68, 68, 14); g.fill();
+    g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 4; g.stroke();
+    g.fillStyle = "#fff8e6"; g.font = "700 40px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(itemName(item).slice(0, 1).toUpperCase(), 48, 52);
+    url = c.toDataURL("image/png");
+    fallbackIcons.set(item, url);
+  }
+  return url;
+}
+export const itemIcon = (item: ItemId) => getStudio()?.icon(item) ?? fallbackIcon(item);
+
+/** Simple 2D paper doll for the character creator when 3D previews are unavailable. */
+export function drawFallbackAvatar(target: HTMLCanvasElement, hearth: Hearth) {
+  const g = target.getContext("2d")!, w = target.width, h = target.height, col = HEARTH_INFO[hearth].color;
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = "#6b5a46"; g.fillRect(w * 0.38, h * 0.62, w * 0.09, h * 0.3); g.fillRect(w * 0.53, h * 0.62, w * 0.09, h * 0.3);
+  g.fillStyle = col; g.beginPath(); g.moveTo(w * 0.3, h * 0.3); g.lineTo(w * 0.7, h * 0.3); g.lineTo(w * 0.66, h * 0.64); g.lineTo(w * 0.34, h * 0.64); g.fill();
+  g.fillStyle = "#e2b88f"; g.beginPath(); g.arc(w / 2, h * 0.2, w * 0.13, 0, 7); g.fill();
+  g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 3; g.stroke();
+}

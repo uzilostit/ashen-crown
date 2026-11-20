@@ -11,6 +11,7 @@ import { QualityController, type QualityProfile } from "./quality";
 import { buildTerrain, type Terrain } from "./terrain";
 import { ARENA_R, SPAWN_R, WORLD_SCALE, clamp, damp, lerp, terrainY, wedgeOf, wrapAngle } from "./util";
 import { HEARTH_INFO, skinFor } from "../content";
+import { reportDiag } from "../diag";
 
 export type WorldMode = "menu" | "lobby" | "game";
 export type WorldEvent =
@@ -110,8 +111,12 @@ export class World {
   private shake = 0;
   private disposed = false;
   private frameDt = 0.016;
+  private postBroken = false;
+  /** Fired if even plain rendering produces a blank canvas. */
+  onGraphicsBlocked: (() => void) | null = null;
   /** Smoothed frames per second, for diagnostics. */
   fps = 0;
+  get postCaps() { return this.post.caps; }
 
   // camera rig
   yaw = 0;
@@ -170,6 +175,16 @@ export class World {
     this.scene.background = new THREE.Color("#c4d5d2");
 
     this.post = new PostStack(this.renderer, this.scene, this.camera, innerWidth, innerHeight);
+    this.post.onBlank = (where) => {
+      reportDiag("blank-frame", { where, caps: JSON.stringify(this.post.caps) });
+      if (where === "post") {
+        // This browser can't run the post chain (strict WebGL): draw the scene directly instead.
+        this.post.configure({ ...this.quality.profile, ao: false, bloom: false, tilt: false, grade: false }, innerWidth, innerHeight);
+        this.postBroken = true;
+      } else this.onGraphicsBlocked?.();
+    };
+    this.canvas.addEventListener("webglcontextlost", () => reportDiag("contextlost"));
+    this.canvas.addEventListener("webglcontextrestored", () => reportDiag("contextrestored"));
     this.applyProfile(p);
     quality.onChange((pr) => this.applyProfile(pr));
     this.resize();
@@ -194,8 +209,8 @@ export class World {
     this.scene.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.Material | undefined; if (m) m.needsUpdate = true; });
     const w = innerWidth, h = innerHeight;
     this.renderer.setSize(w, h);
-    this.post.configure(p, w * (devicePixelRatio ? Math.min(devicePixelRatio, p.pixelRatio) : 1), h * Math.min(devicePixelRatio || 1, p.pixelRatio));
-    if (this.quality.tier <= 3) { const s = this.quality.tier <= 2 ? 4 : 2; (this.post.composer.renderTarget1 as THREE.WebGLRenderTarget).samples = s; (this.post.composer.renderTarget2 as THREE.WebGLRenderTarget).samples = s; }
+    this.post.configure(this.postBroken ? { ...p, ao: false, bloom: false, tilt: false, grade: false } : p, w * (devicePixelRatio ? Math.min(devicePixelRatio, p.pixelRatio) : 1), h * Math.min(devicePixelRatio || 1, p.pixelRatio));
+    if (this.quality.tier <= 2 && this.post.caps.msaa) { const s = 4; (this.post.composer.renderTarget1 as THREE.WebGLRenderTarget).samples = s; (this.post.composer.renderTarget2 as THREE.WebGLRenderTarget).samples = s; }
     this.post.composer.setPixelRatio(Math.min(devicePixelRatio || 1, p.pixelRatio));
     this.post.composer.setSize(w, h);
     this.updateShadowFrustum();

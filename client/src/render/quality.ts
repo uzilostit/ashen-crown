@@ -20,13 +20,13 @@ export const PROFILES: QualityProfile[] = [
   { name: "Ultra", pixelRatio: 2, shadows: true, shadowSize: 4096, ao: true, bloom: true, tilt: true, grade: true, decor: 1, particles: 900, fogSheets: 40, fxLights: true, terrainStep: 1.25, texture: 1024 },
   { name: "High", pixelRatio: 1.75, shadows: true, shadowSize: 2048, ao: false, bloom: true, tilt: true, grade: true, decor: 0.9, particles: 700, fogSheets: 30, fxLights: true, terrainStep: 1.4, texture: 512 },
   { name: "Medium", pixelRatio: 1.5, shadows: true, shadowSize: 2048, ao: false, bloom: false, tilt: true, grade: true, decor: 0.7, particles: 450, fogSheets: 18, fxLights: true, terrainStep: 1.5, texture: 512 },
-  { name: "Low", pixelRatio: 1.25, shadows: true, shadowSize: 1024, ao: false, bloom: false, tilt: true, grade: true, decor: 0.45, particles: 250, fogSheets: 8, fxLights: true, terrainStep: 1.7, texture: 512 },
+  { name: "Low", pixelRatio: 1.5, shadows: true, shadowSize: 1024, ao: false, bloom: false, tilt: false, grade: false, decor: 0.5, particles: 250, fogSheets: 8, fxLights: true, terrainStep: 1.7, texture: 512 },
   { name: "Minimal", pixelRatio: 1, shadows: false, shadowSize: 512, ao: false, bloom: false, tilt: false, grade: false, decor: 0.25, particles: 120, fogSheets: 4, fxLights: false, terrainStep: 2.0, texture: 256 },
 ];
 
 const KEY = "ashen-crown-quality";
-/** Auto mode never drops below this tier; Minimal is manual only. */
-const AUTO_FLOOR = 3;
+/** Lowest tier Auto may fall to. */
+const AUTO_FLOOR = 4;
 
 /**
  * Picks a starting tier from the device, then adapts from measured frame times.
@@ -54,7 +54,7 @@ export class QualityController {
     const stored = localStorage.getItem(KEY);
     const touch = matchMedia("(pointer:coarse)").matches;
     const big = Math.min(innerWidth, innerHeight) >= 700;
-    const detected = touch && !big ? 2 : 1;
+    const detected = touch ? (big ? 2 : 3) : 1;
     this.auto = stored === null || stored === "auto";
     this.tier = this.auto ? detected : Math.max(0, Math.min(PROFILES.length - 1, Number(stored) || 0));
     this.maxTier = detected;

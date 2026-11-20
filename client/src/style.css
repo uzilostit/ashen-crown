@@ -275,3 +275,7 @@ input { -webkit-user-select: text; user-select: text; }
 .gfx .seg button { background: transparent; color: var(--paper); padding: .3rem .3rem; font-size: .95rem; }
 .gfx .seg button + button { border-left-color: rgba(237,228,207,.3); }
 .gfx .seg button[aria-pressed=true] { background: var(--paper); color: var(--text); }
+
+/* cheap vignette for tiers that skip the post-processing chain */
+.vignette { position: fixed; inset: 0; pointer-events: none; z-index: 2; opacity: 0; transition: opacity .4s; background: radial-gradient(ellipse at center, transparent 55%, rgba(12,16,20,.42) 100%); }
+.vignette.on { opacity: 1; }

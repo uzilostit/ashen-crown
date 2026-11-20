@@ -2,7 +2,7 @@ import { HEARTHS, ROOM_CODE_ALPHABET, type FigureLook, type Hearth } from "@ashe
 import { HEARTH_INFO, LOOKS, TITLE } from "../content";
 import { crestSvg } from "./crest";
 import { h } from "./dom";
-import { getStudio } from "./studio";
+import { drawFallbackAvatar, getStudio } from "./studio";
 
 export interface Identity { name: string; hearth: Hearth; look: FigureLook }
 export interface HomeCtx {
@@ -75,7 +75,7 @@ export function mountHome(parent: HTMLElement, ctx: HomeCtx) {
   let raf = 0;
   const loop = (t: number) => {
     raf = requestAnimationFrame(loop);
-    if (avatar.offsetParent) getStudio().avatar(avatar, id.hearth, id.look, t / 1000, "me");
+    if (avatar.offsetParent) { const st = getStudio(); st ? st.avatar(avatar, id.hearth, id.look, t / 1000, "me") : drawFallbackAvatar(avatar, id.hearth); }
   };
   raf = requestAnimationFrame(loop);
   if (ctx.prefillCode) code.focus();
