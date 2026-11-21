@@ -317,7 +317,7 @@ html.touch-ui .h-hp { width: 250px; padding: .22rem .5rem; }
 html.touch-ui .h-meters, html.touch-ui .h-weapon { display: none; }
 html.touch-ui .h-herald { bottom: calc(var(--safe-b) + 6.1rem); }
 html.touch-ui .h-prompt { bottom: calc(var(--safe-b) + 8.4rem); }
-html.touch-ui .h-loot { width: 224px; top: 46%; right: calc(var(--safe-r) + .8rem); }
+html.touch-ui .h-loot { width: 206px; top: 56%; right: calc(var(--safe-r) + .8rem); }
 html.touch-ui .h-left { width: 140px; height: 140px; bottom: calc(var(--safe-b) + .9rem); }
 html.touch-ui .ring i { width: 54px; height: 54px; margin: -27px; }
 @media (max-width: 900px) { .h-topleft { width: 170px; } .h-hp { width: 250px; } .h-meters, .h-weapon { display: none; } }
