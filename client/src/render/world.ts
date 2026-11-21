@@ -32,6 +32,8 @@ interface Ent {
   snapAt: number;
   speed: number;
   facing: number;
+  yaw: number;
+  yawTarget: number;
   lastStamina: number;
   lastHealth: number;
   alive: boolean;
@@ -289,7 +291,8 @@ export class World {
       e.tx = p.x * WORLD_SCALE; e.tz = p.z * WORLD_SCALE;
       e.vx = (p.vx ?? 0) * WORLD_SCALE; e.vz = (p.vz ?? 0) * WORLD_SCALE;
       e.snapAt = performance.now();
-      if (fresh) e.pos.set(e.tx, 0, e.tz);
+      e.yawTarget = p.yaw;
+      if (fresh) { e.pos.set(e.tx, 0, e.tz); e.yaw = p.yaw; }
       const wasAlive = e.alive;
       e.alive = p.alive; e.escaped = p.escaped;
       if (wasAlive && !p.alive) this.emit({ type: "death", id: p.id, near: !!me && Math.hypot(p.x - me.x, p.z - me.z) < 30 });
@@ -324,7 +327,7 @@ export class World {
       const info = HEARTH_INFO[hearth];
       const fig = new PaperFigure(this.kit, { hearthColor: info.color, accent: info.accent, crest: info.crest, look: look as FigureLook, skin: skinFor(id) });
       this.scene.add(fig.object);
-      e = { id, fig, hearth, look, pos: new THREE.Vector3(), tx: 0, tz: 0, vx: 0, vz: 0, snapAt: performance.now(), speed: 0, facing: 1, lastStamina: 100, lastHealth: 100, alive: true, escaped: false, held: "", stepClock: 0 };
+      e = { id, fig, hearth, look, pos: new THREE.Vector3(), tx: 0, tz: 0, vx: 0, vz: 0, snapAt: performance.now(), speed: 0, facing: 1, yaw: 0, yawTarget: 0, lastStamina: 100, lastHealth: 100, alive: true, escaped: false, held: "", stepClock: 0 };
       this.ents.set(id, e);
     }
     return e;
@@ -495,7 +498,10 @@ export class World {
       if (e.speed > 1.2) e.facing = alongRight >= 0 ? 1 : -1;
       const f = e.fig;
       f.object.position.copy(e.pos);
-      f.billboard.rotation.y = Math.atan2(this.camera.position.x - e.pos.x, this.camera.position.z - e.pos.z);
+      // In the match figures face where they run; in the lobby they turn to the cameras.
+      const aim = this.mode === "game" ? e.yawTarget : Math.atan2(this.camera.position.x - e.pos.x, this.camera.position.z - e.pos.z);
+      e.yaw += wrapAngle(aim - e.yaw) * (1 - Math.exp(-12 * dt));
+      f.billboard.rotation.y = e.yaw;
       const isSelf = e.id === this.selfId;
       f.pose({ speed: e.speed, sprint: e.speed > 7, block: isSelf && this.localPose.block, dead: !e.alive, facing: e.facing }, dt);
       f.object.visible = !e.escaped && (this.mode !== "game" || true);

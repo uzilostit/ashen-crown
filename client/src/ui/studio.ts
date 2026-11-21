@@ -75,11 +75,11 @@ class Studio {
     const w = target.width, hgt = target.height;
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(w, hgt);
-    f.billboard.rotation.y = Math.sin(t * 0.8) * 0.4;
+    f.billboard.rotation.y = t * 0.7;
     f.pose({ speed: 0, facing: 1 }, 0.016);
     this.camera.aspect = w / hgt;
-    this.camera.position.set(0, 1.55, 11.5);
-    this.camera.lookAt(0, 1.45, 0);
+    this.camera.position.set(0, 2.1, 11.5);
+    this.camera.lookAt(0, 1.55, 0);
     this.camera.updateProjectionMatrix();
     this.renderer.render(this.scene, this.camera);
     const ctx = target.getContext("2d")!;
