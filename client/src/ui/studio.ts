@@ -7,38 +7,68 @@ import { HEARTH_INFO, itemName, skinFor } from "../content";
 import { ITEM_ACCENT } from "../render/items";
 import { reportDiag } from "../diag";
 
-/** One small offscreen renderer that photographs paper models: hotbar icons and character previews. */
+/**
+ * Photographs paper models (hotbar icons, character preview) using the game's own renderer and an offscreen target.
+ * Browsers with strict WebGL (Brave Shields) lose the main context if a second one is created, so we never make one.
+ */
 class Studio {
-  readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(26, 1, 0.1, 100);
   readonly kit = new PaperKit(256);
   private icons = new Map<ItemId, string>();
   private fig: { key: string; f: PaperFigure } | null = null;
+  private targets = new Map<string, THREE.WebGLRenderTarget>();
+  private scratch = document.createElement("canvas");
+  private lastAvatar = 0;
 
-  constructor() {
-    // Some browsers (Brave with Shields up) refuse extra contexts or flags, so try progressively plainer options.
-    let r: THREE.WebGLRenderer | null = null;
-    for (const opts of [{ alpha: true, antialias: true, preserveDrawingBuffer: true }, { alpha: true, antialias: false, preserveDrawingBuffer: true }, { alpha: true }]) {
-      try { r = new THREE.WebGLRenderer(opts); break; } catch { /* try the next set */ }
-    }
-    if (!r) throw new Error("no studio context");
-    this.renderer = r;
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.scene.add(new THREE.HemisphereLight("#fff4e0", "#5a5048", 1.7));
-    const key = new THREE.DirectionalLight("#fff0d4", 2.6);
+  constructor(private renderer: THREE.WebGLRenderer) {
+    this.scene.add(new THREE.HemisphereLight("#fff4e0", "#5a5048", 1.5));
+    const key = new THREE.DirectionalLight("#fff0d4", 2.2);
     key.position.set(-3, 5, 6);
     this.scene.add(key);
+  }
+
+  private target(w: number, h: number) {
+    const k = `${w}x${h}`;
+    let t = this.targets.get(k);
+    if (!t) {
+      t = new THREE.WebGLRenderTarget(w, h, { type: THREE.UnsignedByteType, samples: 4, depthBuffer: true });
+      t.texture.colorSpace = THREE.SRGBColorSpace;
+      this.targets.set(k, t);
+    }
+    return t;
+  }
+
+  /** Render the studio scene to RGBA pixels (top row first, straight alpha). */
+  private shoot(w: number, h: number): ImageData {
+    const r = this.renderer, rt = this.target(w, h);
+    const prevTarget = r.getRenderTarget(), prevTone = r.toneMapping, prevAlpha = r.getClearAlpha(), prevColor = r.getClearColor(new THREE.Color());
+    r.setRenderTarget(rt);
+    r.toneMapping = THREE.NoToneMapping;
+    r.setClearColor(0x000000, 0);
+    r.clear();
+    r.render(this.scene, this.camera);
+    const buf = new Uint8Array(w * h * 4);
+    r.readRenderTargetPixels(rt, 0, 0, w, h, buf);
+    r.setRenderTarget(prevTarget);
+    r.toneMapping = prevTone;
+    r.setClearColor(prevColor, prevAlpha);
+    const out = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      const src = (h - 1 - y) * w * 4, dst = y * w * 4;
+      for (let x = 0; x < w * 4; x += 4) {
+        const a = buf[src + x + 3]!;
+        const k = a > 0 && a < 255 ? 255 / a : 1; // un-premultiply the antialiased edges
+        out[dst + x] = Math.min(255, buf[src + x]! * k); out[dst + x + 1] = Math.min(255, buf[src + x + 1]! * k); out[dst + x + 2] = Math.min(255, buf[src + x + 2]! * k); out[dst + x + 3] = a;
+      }
+    }
+    return new ImageData(out, w, h);
   }
 
   icon(item: ItemId): string {
     const cached = this.icons.get(item);
     if (cached) return cached;
     const size = 128;
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(size, size);
     if (this.fig) this.fig.f.object.visible = false;
     const model = buildItem(this.kit, item);
     this.scene.add(model);
@@ -52,16 +82,21 @@ class Studio {
     this.camera.position.set(0, 0, r * 3.1);
     this.camera.lookAt(0, 0, 0);
     this.camera.updateProjectionMatrix();
-    this.renderer.render(this.scene, this.camera);
-    const url = this.renderer.domElement.toDataURL("image/png");
+    const img = this.shoot(size, size);
     this.scene.remove(model);
     if (this.fig) this.fig.f.object.visible = true;
+    this.scratch.width = this.scratch.height = size;
+    this.scratch.getContext("2d")!.putImageData(img, 0, 0);
+    const url = this.scratch.toDataURL("image/png");
     this.icons.set(item, url);
     return url;
   }
 
-  /** Draw the figure into a 2D canvas. Call every frame for a turntable effect. */
+  /** Draw the figure into a 2D canvas. Call every frame for a turntable; it throttles itself to about 24 fps. */
   avatar(target: HTMLCanvasElement, hearth: Hearth, look: FigureLook, t: number, key = "preview") {
+    const nowMs = performance.now();
+    if (nowMs - this.lastAvatar < 40) return;
+    this.lastAvatar = nowMs;
     const k = `${key}:${hearth}:${look}`;
     if (!this.fig || this.fig.key !== k) {
       if (this.fig) { this.scene.remove(this.fig.f.object); this.fig.f.dispose(); }
@@ -72,28 +107,25 @@ class Studio {
       this.fig = { key: k, f };
     }
     const f = this.fig.f;
-    const w = target.width, hgt = target.height;
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(w, hgt);
     f.billboard.rotation.y = t * 0.7;
-    f.pose({ speed: 0, facing: 1 }, 0.016);
+    f.pose({ speed: 0 }, 0.016);
+    const w = target.width, hgt = target.height;
     this.camera.aspect = w / hgt;
     this.camera.position.set(0, 2.1, 11.5);
     this.camera.lookAt(0, 1.55, 0);
     this.camera.updateProjectionMatrix();
-    this.renderer.render(this.scene, this.camera);
-    const ctx = target.getContext("2d")!;
-    ctx.clearRect(0, 0, w, hgt);
-    ctx.drawImage(this.renderer.domElement, 0, 0, w, hgt);
+    target.getContext("2d")!.putImageData(this.shoot(w, hgt), 0, 0);
   }
 }
 
 let studio: Studio | null = null;
+let studioRenderer: THREE.WebGLRenderer | null = null;
+/** Called once by main with the game's renderer. Until then, and if rendering ever fails, 2D fallbacks are used. */
+export function attachStudio(renderer: THREE.WebGLRenderer) { studioRenderer = renderer; }
 let studioFailed = false;
-/** The studio is optional decoration. If the browser won't give a second WebGL context we never ask again. */
 export function getStudio(): Studio | null {
-  if (studio || studioFailed) return studio;
-  try { studio = new Studio(); } catch { studioFailed = true; reportDiag("studio-failed"); }
+  if (studio || studioFailed || !studioRenderer) return studio;
+  try { studio = new Studio(studioRenderer); } catch { studioFailed = true; reportDiag("studio-failed"); }
   return studio;
 }
 
@@ -115,7 +147,7 @@ function fallbackIcon(item: ItemId): string {
   }
   return url;
 }
-export const itemIcon = (item: ItemId) => getStudio()?.icon(item) ?? fallbackIcon(item);
+export const itemIcon = (item: ItemId) => { try { return getStudio()?.icon(item) ?? fallbackIcon(item); } catch { studioFailed = true; return fallbackIcon(item); } };
 
 /** Simple 2D paper doll for the character creator when 3D previews are unavailable. */
 export function drawFallbackAvatar(target: HTMLCanvasElement, hearth: Hearth) {

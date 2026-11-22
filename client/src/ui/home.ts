@@ -22,7 +22,7 @@ export function mountHome(parent: HTMLElement, ctx: HomeCtx) {
   const motto = h("p", { class: "motto" });
   const lookNote = h("p", { class: "motto" });
   const name = h("input", { type: "text", maxlength: 18, placeholder: "Your name", autocomplete: "nickname", "aria-label": "Your name", value: id.name }) as HTMLInputElement;
-  const avatar = h("canvas", { class: "avatar", width: 340, height: 500, "aria-hidden": "true" }) as HTMLCanvasElement;
+  const avatar = h("canvas", { class: "avatar", width: 240, height: 352, "aria-hidden": "true" }) as HTMLCanvasElement;
   const code = h("input", { type: "text", class: "code-in", maxlength: 7, placeholder: "ABC234", autocomplete: "off", autocapitalize: "characters", spellcheck: "false", "aria-label": "Room code", value: ctx.prefillCode }) as HTMLInputElement;
 
   const hearthBtns = HEARTHS.map((hh) => {
@@ -75,7 +75,7 @@ export function mountHome(parent: HTMLElement, ctx: HomeCtx) {
   let raf = 0;
   const loop = (t: number) => {
     raf = requestAnimationFrame(loop);
-    if (avatar.offsetParent) { const st = getStudio(); st ? st.avatar(avatar, id.hearth, id.look, t / 1000, "me") : drawFallbackAvatar(avatar, id.hearth); }
+    if (avatar.offsetParent) { const st = getStudio(); try { st ? st.avatar(avatar, id.hearth, id.look, t / 1000, "me") : drawFallbackAvatar(avatar, id.hearth); } catch { drawFallbackAvatar(avatar, id.hearth); } }
   };
   raf = requestAnimationFrame(loop);
   if (ctx.prefillCode) code.focus();

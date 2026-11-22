@@ -124,9 +124,13 @@ export class PostStack {
     if (!this.guardDone && ++this.guardFrames === 24) this.checkNotBlank();
   }
 
+  /** Re-arm the blank-frame check, e.g. after the context was lost and restored. */
+  rearmGuard() { this.guardFrames = 0; this.guardDone = false; }
+
   /** Reads a few pixels of what was just drawn. A scene that is all zeros means this browser can't run the current chain. */
   private checkNotBlank() {
     const gl = this.renderer.getContext();
+    if (gl.isContextLost()) { this.guardFrames = 0; return; } // judge again once the browser hands the context back
     try {
       const px = new Uint8Array(4);
       let lit = 0;

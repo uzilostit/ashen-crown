@@ -114,6 +114,7 @@ export class World {
   private disposed = false;
   private frameDt = 0.016;
   private postBroken = false;
+  private ctxEventAt = -1e9;
   /** Fired if even plain rendering produces a blank canvas. */
   onGraphicsBlocked: (() => void) | null = null;
   /** Smoothed frames per second, for diagnostics. */
@@ -178,6 +179,7 @@ export class World {
 
     this.post = new PostStack(this.renderer, this.scene, this.camera, innerWidth, innerHeight);
     this.post.onBlank = (where) => {
+      if (performance.now() - this.ctxEventAt < 6000) { this.post.rearmGuard(); return; } // a recent context loss explains a blank frame
       reportDiag("blank-frame", { where, caps: JSON.stringify(this.post.caps) });
       if (where === "post") {
         // This browser can't run the post chain (strict WebGL): draw the scene directly instead.
@@ -185,8 +187,8 @@ export class World {
         this.postBroken = true;
       } else this.onGraphicsBlocked?.();
     };
-    this.canvas.addEventListener("webglcontextlost", () => reportDiag("contextlost"));
-    this.canvas.addEventListener("webglcontextrestored", () => reportDiag("contextrestored"));
+    this.canvas.addEventListener("webglcontextlost", () => { this.ctxEventAt = performance.now(); reportDiag("contextlost"); });
+    this.canvas.addEventListener("webglcontextrestored", () => { this.ctxEventAt = performance.now(); reportDiag("contextrestored"); this.post.rearmGuard(); });
     this.applyProfile(p);
     quality.onChange((pr) => this.applyProfile(pr));
     this.resize();
